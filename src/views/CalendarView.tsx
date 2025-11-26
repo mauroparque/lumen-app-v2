@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db, appId } from '../lib/firebase';
 import { User } from 'firebase/auth';
@@ -15,6 +15,7 @@ interface CalendarViewProps {
 export const CalendarView = ({ appointments, patients, user }: CalendarViewProps) => {
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [showModal, setShowModal] = useState(false);
+    const [selectedProfessional, setSelectedProfessional] = useState<string>('all');
 
     const startOfWeek = new Date(selectedDate);
     startOfWeek.setDate(selectedDate.getDate() - selectedDate.getDay() + 1);
@@ -24,34 +25,60 @@ export const CalendarView = ({ appointments, patients, user }: CalendarViewProps
         return d;
     });
 
+    // Extract unique professionals
+    const professionals = useMemo(() => {
+        const pros = new Set<string>();
+        appointments.forEach(app => {
+            if (app.professional) pros.add(app.professional);
+        });
+        return Array.from(pros);
+    }, [appointments]);
+
+    const filteredAppointments = useMemo(() => {
+        if (selectedProfessional === 'all') return appointments;
+        return appointments.filter(app => app.professional === selectedProfessional);
+    }, [appointments, selectedProfessional]);
+
     // OPTIMIZACIÓN: Indexar citas por fecha-hora para acceso O(1)
     const appointmentsMap = useMemo(() => {
         const map = new Map<string, Appointment>();
-        appointments.forEach(app => {
-            // Clave: YYYY-MM-DD-HH
-            const hour = app.time.split(':')[0];
-            const key = `${app.date}-${hour}`;
+        filteredAppointments.forEach(app => {
+            // Clave: YYYY-MM-DD-HH:mm
+            // Normalizar la hora de la cita a bloques de 15 min si es necesario, 
+            // pero asumimos que el input guarda "HH:mm"
+            const key = `${app.date}-${app.time}`;
             map.set(key, app);
         });
         return map;
-    }, [appointments]);
+    }, [filteredAppointments]);
 
-    const getAppt = (day: Date, hour: number) => {
+    const getAppt = (day: Date, hour: number, minute: number) => {
         const dStr = day.toISOString().split('T')[0];
-        const key = `${dStr}-${hour < 10 ? '0' + hour : hour}`; // Asegurar formato de hora si es necesario, pero el split anterior suele dar "09" o "9"
-        // Ajuste: el input time suele dar "09:00", el split da "09".
-        // Mi generador de claves usa el split directo.
-        // Verifiquemos consistencia. Si app.time es "09:00", split es "09".
-        // Si paso hour como numero 9, debo convertirlo a string.
-        // Mejor normalizar a entero para la clave.
-        return appointmentsMap.get(`${dStr}-${hour < 10 ? '0' + hour : hour}`);
+        const hStr = hour < 10 ? `0${hour}` : `${hour}`;
+        const mStr = minute < 10 ? `0${minute}` : `${minute}`;
+        return appointmentsMap.get(`${dStr}-${hStr}:${mStr}`);
     };
+
+    const hours = Array.from({ length: 13 }, (_, i) => i + 8); // 8 to 20
+    const minutes = [0, 15, 30, 45];
 
     return (
         <div className="p-6 h-full flex flex-col">
             <div className="flex justify-between items-center mb-4">
                 <h1 className="text-2xl font-bold text-slate-800">Agenda</h1>
-                <div className="flex space-x-4">
+
+                <div className="flex items-center space-x-4">
+                    {professionals.length > 0 && (
+                        <select
+                            className="p-2 border rounded-lg bg-white text-sm"
+                            value={selectedProfessional}
+                            onChange={(e) => setSelectedProfessional(e.target.value)}
+                        >
+                            <option value="all">Todos los profesionales</option>
+                            {professionals.map(p => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                    )}
+
                     <div className="flex items-center border rounded-lg bg-white">
                         <button onClick={() => setSelectedDate(new Date(selectedDate.setDate(selectedDate.getDate() - 7)))} className="p-2 hover:bg-slate-50"><ChevronLeft size={18} /></button>
                         <span className="px-4 text-sm font-medium min-w-[120px] text-center">
@@ -76,36 +103,49 @@ export const CalendarView = ({ appointments, patients, user }: CalendarViewProps
                     ))}
                 </div>
                 <div className="flex-1 overflow-y-auto">
-                    {Array.from({ length: 11 }, (_, i) => i + 8).map(hour => (
-                        <div key={hour} className="grid grid-cols-6 h-28 border-b last:border-0">
-                            <div className="p-2 text-xs text-slate-400 text-center border-r pt-3">{hour}:00</div>
-                            {weekDays.map((day, i) => {
-                                const appt = getAppt(day, hour);
-                                return (
-                                    <div key={i} className="border-r p-1 relative group hover:bg-slate-50/50">
-                                        {appt ? (
-                                            <div className={`w-full h-full rounded p-2 text-xs border-l-4 shadow-sm cursor-pointer relative
-                        ${appt.type === 'online' ? 'bg-blue-50 border-blue-300 text-blue-800' : 'bg-teal-50 border-teal-300 text-teal-800'}`}>
-                                                <div className="font-bold truncate">{appt.patientName}</div>
-                                                <div className="flex justify-between items-end mt-2">
-                                                    <div className="flex items-center space-x-1 opacity-80">
-                                                        {appt.type === 'online' ? <Video size={10} /> : <MapPin size={10} />}
-                                                        <span>{appt.type}</span>
-                                                    </div>
-                                                    {appt.isPaid ? (
-                                                        <div className="bg-green-100 text-green-700 p-0.5 rounded rounded-full" title="Pagado"><CheckCircle size={10} /></div>
-                                                    ) : (
-                                                        <div className="bg-red-100 text-red-600 px-1 rounded text-[8px] font-bold uppercase" title="Pendiente de Pago">IMPAGO</div>
-                                                    )}
-                                                </div>
-                                                <button onClick={(e) => { e.stopPropagation(); deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'appointments', appt.id)); }} className="absolute top-1 right-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={12} /></button>
-                                            </div>
-                                        ) : (
-                                            <button onClick={() => setShowModal(true)} className="w-full h-full flex items-center justify-center opacity-0 group-hover:opacity-100 text-teal-300 hover:text-teal-600"><Plus size={14} /></button>
-                                        )}
+                    {hours.map(hour => (
+                        <div key={hour} className="contents">
+                            {minutes.map((minute) => (
+                                <div key={`${hour}-${minute}`} className="grid grid-cols-6 min-h-[40px] border-b last:border-0">
+                                    <div className={`p-1 text-[10px] text-slate-400 text-center border-r flex items-start justify-center ${minute === 0 ? 'font-bold text-slate-600' : ''}`}>
+                                        {minute === 0 ? `${hour}:00` : `:${minute}`}
                                     </div>
-                                )
-                            })}
+                                    {weekDays.map((day, i) => {
+                                        const appt = getAppt(day, hour, minute);
+                                        return (
+                                            <div key={i} className="border-r p-0.5 relative group hover:bg-slate-50/50">
+                                                {appt ? (
+                                                    <div className={`w-full h-full rounded p-1 text-[10px] border-l-2 shadow-sm cursor-pointer relative overflow-hidden
+                                                        ${appt.type === 'online' ? 'bg-blue-50 border-blue-300 text-blue-800' : 'bg-teal-50 border-teal-300 text-teal-800'}`}
+                                                        style={{ minHeight: '36px' }}
+                                                    >
+                                                        <div className="font-bold truncate leading-tight">{appt.patientName}</div>
+                                                        <div className="flex justify-between items-center mt-1">
+                                                            <div className="flex items-center space-x-1 opacity-80 scale-90 origin-left">
+                                                                {appt.type === 'online' ? <Video size={10} /> : <MapPin size={10} />}
+                                                                <span className="truncate max-w-[40px]">{appt.professional || 'General'}</span>
+                                                            </div>
+                                                            {appt.isPaid ? (
+                                                                <CheckCircle size={10} className="text-green-600" />
+                                                            ) : (
+                                                                <span className="text-[8px] font-bold text-red-500">IMPAGO</span>
+                                                            )}
+                                                        </div>
+                                                        {appt.meetLink && (
+                                                            <a href={appt.meetLink} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="block mt-1 text-center bg-blue-100 text-blue-700 rounded py-0.5 hover:bg-blue-200">
+                                                                Unirse
+                                                            </a>
+                                                        )}
+                                                        <button onClick={(e) => { e.stopPropagation(); deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'appointments', appt.id)); }} className="absolute top-0.5 right-0.5 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={10} /></button>
+                                                    </div>
+                                                ) : (
+                                                    <button onClick={() => setShowModal(true)} className="w-full h-full flex items-center justify-center opacity-0 group-hover:opacity-100 text-teal-300 hover:text-teal-600"><Plus size={12} /></button>
+                                                )}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            ))}
                         </div>
                     ))}
                 </div>

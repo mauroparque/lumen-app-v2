@@ -21,6 +21,7 @@ export interface Appointment {
     status: 'programado' | 'completado' | 'cancelado';
     isPaid?: boolean;
     price?: number;
+    professional?: string;
 }
 
 export interface Payment {

@@ -11,13 +11,22 @@ interface AppointmentModalProps {
 }
 
 export const AppointmentModal = ({ onClose, patients, user }: AppointmentModalProps) => {
-    const [form, setForm] = useState({
+    const [form, setForm] = useState<{
+        patientId: string;
+        date: string;
+        time: string;
+        type: 'presencial' | 'online';
+        price: string;
+        meetLink: string;
+        professional: string;
+    }>({
         patientId: '',
         date: new Date().toISOString().split('T')[0],
         time: '09:00',
-        type: 'presencial' as const,
+        type: 'presencial',
         price: '',
-        meetLink: ''
+        meetLink: '',
+        professional: ''
     });
 
     const { addAppointment } = useDataActions(user);
@@ -29,16 +38,6 @@ export const AppointmentModal = ({ onClose, patients, user }: AppointmentModalPr
             setForm(prev => ({ ...prev, price: p.fee!.toString() }));
         }
     }, [form.patientId, patients]);
-
-    // Auto-generate Meet link when type is online
-    useEffect(() => {
-        if (form.type === 'online' && !form.meetLink) {
-            const randomId = Math.random().toString(36).substring(7);
-            setForm(prev => ({ ...prev, meetLink: `https://meet.google.com/${randomId}` }));
-        } else if (form.type === 'presencial') {
-            setForm(prev => ({ ...prev, meetLink: '' }));
-        }
-    }, [form.type]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -77,15 +76,19 @@ export const AppointmentModal = ({ onClose, patients, user }: AppointmentModalPr
                         </div>
                         <div>
                             <label className="text-xs text-slate-500">Tipo</label>
-                            <select className="w-full p-2 border rounded-lg" value={form.type} onChange={(e: any) => setForm({ ...form, type: e.target.value })}>
+                            <select className="w-full p-2 border rounded-lg" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as 'presencial' | 'online' })}>
                                 <option value="presencial">Presencial</option><option value="online">Online</option>
                             </select>
                         </div>
                     </div>
+                    <div>
+                        <label className="text-xs text-slate-500">Profesional (Opcional)</label>
+                        <input type="text" placeholder="Nombre del profesional" className="w-full p-2 border rounded-lg" value={form.professional} onChange={e => setForm({ ...form, professional: e.target.value })} />
+                    </div>
                     {form.type === 'online' && (
                         <div>
-                            <label className="text-xs text-slate-500">Link de Reunión</label>
-                            <input className="w-full p-2 border rounded-lg bg-slate-50 text-slate-600" value={form.meetLink} readOnly />
+                            <label className="text-xs text-slate-500">Link de Reunión (Opcional)</label>
+                            <input placeholder="https://meet.google.com/..." className="w-full p-2 border rounded-lg" value={form.meetLink} onChange={e => setForm({ ...form, meetLink: e.target.value })} />
                         </div>
                     )}
                     <div className="flex justify-end mt-6"><button type="button" onClick={onClose} className="mr-3 text-slate-500">Cancelar</button><button type="submit" className="bg-teal-600 text-white px-4 py-2 rounded-lg">Guardar</button></div>

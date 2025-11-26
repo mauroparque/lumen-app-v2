@@ -1,0 +1,68 @@
+name: Deploy Lumen App
+
+on:
+  push:
+    branches:
+      - main # O la rama que uses para producción
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository in GitHub runner
+        uses: actions/checkout@v3
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          script: |
+            echo "=== Inicio Despliegue App ==="
+
+            echo "1. Entrando en carpeta del proyecto"
+            # CAMBIO: Apuntamos a la nueva carpeta de la app
+            cd /opt/lumen-web-app || { echo 'ERROR: No se pudo entrar al directorio'; exit 1; }
+
+            echo "2. Estado actual del repo antes del fetch"
+            git status
+
+            echo "3. Ejecutando git fetch --all"
+            git fetch --all || { echo 'ERROR: git fetch falló'; exit 1; }
+
+            echo "4. Reseteando al origen main"
+            git reset --hard origin/main || { echo 'ERROR: git reset falló'; exit 1; }
+            
+            echo "5. Estado actual del repo luego del reset"
+            git status
+
+            # --- PASOS CRUCIALES PARA NVM ---
+            echo "6. Cargando NVM (Node Version Manager)"
+            # Esta línea carga NVM en la sesión actual
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" || { echo 'ERROR: No se pudo cargar NVM'; exit 1; }
+
+            echo "7. Activando Node.js v20"
+            nvm use 20 || { echo 'ERROR: nvm use 20 falló'; exit 1; }
+
+            echo "8. Verificando versión de Node"
+            node -v
+            # --- FIN PASOS NVM ---
+
+            echo "9. Instalando dependencias con npm ci"
+            # 'npm ci' es más rápido y seguro para CI/CD que 'npm install'
+            npm ci || { echo 'ERROR: npm ci falló'; exit 1; }
+
+            echo "10. Ejecutando build con npm run build"
+            npm run build || { echo 'ERROR: npm run build falló'; exit 1; }
+
+            echo "11. Listado archivos en carpeta dist"
+            ls -l ./dist
+
+            echo "12. Reiniciando Nginx en Docker para tomar cambios"
+            # Esto asegura que Nginx limpie buffers y sirva lo nuevo
+            sudo docker-compose restart lumen_app
+
+            echo "=== Fin Despliegue App ==="

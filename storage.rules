@@ -1,0 +1,10 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Permitir acceso a la carpeta de adjuntos de pacientes
+    // Ruta: patients/{patientId}/attachments/{fileName}
+    match /patients/{patientId}/attachments/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

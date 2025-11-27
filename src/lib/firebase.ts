@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 // Validamos que las variables de entorno existan para evitar errores silenciosos
 const requiredEnvVars = [
@@ -28,6 +29,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const storage = getStorage(app);
 
 // Definimos un ID fijo para producción. 
 // Esto reemplaza al dinámico __app_id del entorno de prueba.

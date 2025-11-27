@@ -1,0 +1,104 @@
+import { useState, useEffect } from 'react';
+import { User } from 'firebase/auth';
+import {
+    collection,
+    query,
+    where,
+    onSnapshot,
+    addDoc,
+    updateDoc,
+    doc,
+    Timestamp,
+    setDoc,
+    getDocs
+} from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage, appId, CLINIC_ID } from '../lib/firebase';
+import { ClinicalNote } from '../types';
+
+export const useClinicalNotes = (user: User | null) => {
+    const [loading, setLoading] = useState(false);
+
+    const useClinicalNote = (appointmentId: string) => {
+        const [note, setNote] = useState<ClinicalNote | null>(null);
+        const [loadingNote, setLoadingNote] = useState(true);
+
+        useEffect(() => {
+            if (!appointmentId) {
+                setLoadingNote(false);
+                return;
+            }
+
+            const q = query(
+                collection(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'notes'),
+                where('appointmentId', '==', appointmentId)
+            );
+
+            const unsubscribe = onSnapshot(q, (snapshot) => {
+                if (!snapshot.empty) {
+                    const docData = snapshot.docs[0];
+                    setNote({ id: docData.id, ...docData.data() } as ClinicalNote);
+                } else {
+                    setNote(null);
+                }
+                setLoadingNote(false);
+            });
+
+            return () => unsubscribe();
+        }, [appointmentId]);
+
+        return { note, loadingNote };
+    };
+
+    const saveNote = async (noteData: Partial<ClinicalNote>, appointmentId: string, existingNoteId?: string) => {
+        if (!user) return;
+        setLoading(true);
+        try {
+            const notesCollection = collection(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'notes');
+            const notePayload = {
+                ...noteData,
+                appointmentId,
+                updatedAt: Timestamp.now(),
+                createdBy: user.displayName || user.email
+            };
+
+            if (existingNoteId) {
+                await updateDoc(doc(notesCollection, existingNoteId), notePayload);
+            } else {
+                await addDoc(notesCollection, {
+                    ...notePayload,
+                    createdAt: Timestamp.now()
+                });
+            }
+
+            // Update appointment to indicate it has notes
+            const appointmentRef = doc(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'appointments', appointmentId);
+            await updateDoc(appointmentRef, { hasNotes: true });
+
+        } catch (error) {
+            console.error('Error saving note:', error);
+            throw error;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const uploadAttachment = async (file: File, patientId: string) => {
+        if (!user) throw new Error('User not authenticated');
+        setLoading(true);
+        try {
+            const timestamp = Date.now();
+            const storageRef = ref(storage, `patients/${patientId}/attachments/${timestamp}_${file.name}`);
+            await uploadBytes(storageRef, file);
+            const url = await getDownloadURL(storageRef);
+            return url;
+        } catch (error) {
+            console.error('Error uploading attachment:', error);
+            throw error;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return { useClinicalNote, saveNote, uploadAttachment, loading };
+};

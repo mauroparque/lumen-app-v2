@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { User } from 'firebase/auth';
 import { Appointment } from '../types';
-import { ChevronLeft, ChevronRight, Plus, Video, MapPin, CheckCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Video, MapPin, CheckCircle, FileText, AlertCircle } from 'lucide-react';
 import { AppointmentModal } from '../components/modals/AppointmentModal';
 import { AppointmentDetailsModal } from '../components/modals/AppointmentDetailsModal';
 import { useCalendarAppointments } from '../hooks/useCalendarAppointments';
@@ -283,7 +283,16 @@ export const CalendarView = ({ user, profile }: CalendarViewProps) => {
                                                                 <div className="flex justify-between items-center mt-1">
                                                                     <div className="flex items-center space-x-1 opacity-80 scale-90 origin-left">
                                                                         {isOnline ? <Video size={10} /> : <MapPin size={10} />}
-                                                                        <span className="truncate max-w-[80px]">{appt.professional || 'General'}</span>
+                                                                        <span className="truncate max-w-[60px]">{appt.professional || 'General'}</span>
+
+                                                                        {/* Clinical Note Indicator */}
+                                                                        {appt.hasNotes ? (
+                                                                            <FileText size={10} className="text-slate-600 ml-1" />
+                                                                        ) : (
+                                                                            new Date(appt.date) < new Date() && (
+                                                                                <AlertCircle size={10} className="text-amber-500 ml-1" />
+                                                                            )
+                                                                        )}
                                                                     </div>
                                                                     {appt.isPaid ? (
                                                                         <CheckCircle size={10} className="text-green-600" />

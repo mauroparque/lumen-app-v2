@@ -29,15 +29,7 @@ export interface Appointment {
     price?: number;
     professional?: string;
     office?: string;
-}
-
-export interface Payment {
-    id: string;
-    appointmentId?: string;
-    patientName: string;
-    amount: number;
-    date: any; // Firebase Timestamp
-    concept: string;
+    hasNotes?: boolean;
 }
 
 export interface StaffProfile {

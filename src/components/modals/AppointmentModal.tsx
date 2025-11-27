@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { addDoc, collection, doc, updateDoc } from 'firebase/firestore';
-import { db, appId } from '../../lib/firebase';
 import { User } from 'firebase/auth';
 import { Patient, Appointment } from '../../types';
 import { ModalOverlay } from '../ui';
 import { toast } from 'sonner';
+import { useDataActions } from '../../hooks/useDataActions';
 
 interface AppointmentModalProps {
     onClose: () => void;
@@ -33,6 +32,8 @@ export const AppointmentModal = ({ onClose, patients, user, existingAppointment,
         professional: existingAppointment?.professional || ''
     });
 
+    const { addAppointment, updateAppointment } = useDataActions(user);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const patient = patients.find(p => p.id === form.patientId);
@@ -40,13 +41,13 @@ export const AppointmentModal = ({ onClose, patients, user, existingAppointment,
 
         try {
             if (existingAppointment) {
-                await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'appointments', existingAppointment.id), {
+                await updateAppointment(existingAppointment.id, {
                     ...form,
                     patientName: patient.name
                 });
                 toast.success('Turno actualizado correctamente');
             } else {
-                await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'appointments'), {
+                await addAppointment({
                     ...form,
                     patientName: patient.name,
                     status: 'programado',

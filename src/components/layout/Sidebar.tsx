@@ -12,9 +12,9 @@ interface SidebarProps {
 }
 
 export const Sidebar = ({ user, currentView, setCurrentView }: SidebarProps) => {
-    const { debts } = useFinanceData(user);
+    const { unpaidAppointments } = useFinanceData(user);
 
-    const hasPendingDebts = debts.some(a => {
+    const hasPendingDebts = unpaidAppointments.some(a => {
         const apptDate = new Date(a.date + 'T00:00:00');
         const now = new Date();
         now.setHours(0, 0, 0, 0);

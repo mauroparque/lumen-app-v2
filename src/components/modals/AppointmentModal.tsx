@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
 import { Patient, Appointment } from '../../types';
 import { ModalOverlay } from '../ui';
@@ -31,6 +31,15 @@ export const AppointmentModal = ({ onClose, patients, user, existingAppointment,
         price: existingAppointment?.price || 5000,
         professional: existingAppointment?.professional || ''
     });
+
+    useEffect(() => {
+        if (!existingAppointment && form.patientId) {
+            const selectedPatient = patients.find(p => p.id === form.patientId);
+            if (selectedPatient && selectedPatient.fee) {
+                setForm(prev => ({ ...prev, price: selectedPatient.fee ?? 0 }));
+            }
+        }
+    }, [form.patientId, patients, existingAppointment]);
 
     const { addAppointment, updateAppointment } = useDataActions(user);
 

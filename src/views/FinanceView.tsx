@@ -18,13 +18,20 @@ export const FinanceView = ({ user }: FinanceViewProps) => {
 
     const { unpaidAppointments, payments } = useFinanceData(user);
 
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // Helper to parse YYYY-MM-DD to local Date
+    const getApptDate = (dateStr: string) => {
+        const [y, m, d] = dateStr.split('-').map(Number);
+        return new Date(y, m - 1, d);
+    };
 
     // Filter 1: Overdue (Real Debt)
-    const overdue = unpaidAppointments.filter(a => a.date < today);
+    const overdue = unpaidAppointments.filter(a => getApptDate(a.date) < today);
 
     // Filter 2: Pending/Future (Projected)
-    const pending = unpaidAppointments.filter(a => a.date >= today);
+    const pending = unpaidAppointments.filter(a => getApptDate(a.date) >= today);
 
     const totalIncome = payments.reduce((acc: number, p: Payment) => acc + p.amount, 0);
     const totalOverdue = overdue.reduce((acc: number, a: Appointment) => acc + (a.price || 0), 0);

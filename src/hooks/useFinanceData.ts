@@ -21,8 +21,9 @@ export const useFinanceData = (user: User | null) => {
 
         // DEMO MODE
         if (user.uid === 'demo-user') {
+            // Debts: Unpaid appointments that are not cancelled
+            // Note: In real app we also check date < today, but for debts list we usually want all unpaid
             const unpaid = MOCK_APPOINTMENTS.filter(a => !a.isPaid && a.status !== 'cancelado');
-            unpaid.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             setUnpaidAppointments(unpaid);
             setPayments(MOCK_PAYMENTS);
             setLoading(false);
@@ -33,7 +34,8 @@ export const useFinanceData = (user: User | null) => {
         const appointmentsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'appointments');
         const paymentsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'payments');
 
-        // Query 1: All Unpaid Appointments (No date filter)
+        // Query 1: Debts (Unpaid appointments)
+        // Note: This might require a composite index if we add more filters or sorting
         const unpaidQuery = query(
             appointmentsRef,
             where('isPaid', '==', false),
@@ -49,15 +51,18 @@ export const useFinanceData = (user: User | null) => {
 
         const unsubUnpaid = onSnapshot(unpaidQuery, (snapshot) => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment));
-            // Client-side sort by date descending
+            // Client-side sort by date descending for display
             data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             setUnpaidAppointments(data);
+        }, (error) => {
+            console.error("Error en query de finanzas (Revisar consola para Link de Índice):", error);
+            setLoading(false);
         });
 
         const unsubPayments = onSnapshot(paymentsQuery, (snapshot) => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
             setPayments(data);
-            setLoading(false);
+            setLoading(false); // Assume loading done when payments arrive (or both)
         });
 
         return () => {

@@ -1,10 +1,9 @@
 import { useState, useMemo } from 'react';
-import { doc, deleteDoc } from 'firebase/firestore';
-import { db, appId } from '../lib/firebase';
 import { User } from 'firebase/auth';
 import { Appointment, Patient } from '../types';
-import { ChevronLeft, ChevronRight, Plus, Video, MapPin, CheckCircle, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Video, MapPin, CheckCircle } from 'lucide-react';
 import { AppointmentModal } from '../components/modals/AppointmentModal';
+import { AppointmentDetailsModal } from '../components/modals/AppointmentDetailsModal';
 
 interface CalendarViewProps {
     appointments: Appointment[];
@@ -16,6 +15,9 @@ export const CalendarView = ({ appointments, patients, user }: CalendarViewProps
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [showModal, setShowModal] = useState(false);
     const [selectedProfessional, setSelectedProfessional] = useState<string>('all');
+    const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [modalData, setModalData] = useState<{ date?: string, time?: string } | null>(null);
 
     const startOfWeek = new Date(selectedDate);
     startOfWeek.setDate(selectedDate.getDate() - selectedDate.getDay() + 1);
@@ -39,28 +41,49 @@ export const CalendarView = ({ appointments, patients, user }: CalendarViewProps
         return appointments.filter(app => app.professional === selectedProfessional);
     }, [appointments, selectedProfessional]);
 
-    // OPTIMIZACIÓN: Indexar citas por fecha-hora para acceso O(1)
+    // Index appointments by date-hour for O(1) access
     const appointmentsMap = useMemo(() => {
-        const map = new Map<string, Appointment>();
+        const map = new Map<string, Appointment[]>();
         filteredAppointments.forEach(app => {
-            // Clave: YYYY-MM-DD-HH:mm
-            // Normalizar la hora de la cita a bloques de 15 min si es necesario, 
-            // pero asumimos que el input guarda "HH:mm"
-            const key = `${app.date}-${app.time}`;
-            map.set(key, app);
+            // Key: YYYY-MM-DD-HH
+            const hour = app.time.split(':')[0];
+            const key = `${app.date}-${hour}`;
+            if (!map.has(key)) map.set(key, []);
+            map.get(key)!.push(app);
         });
+        // Sort by time within the hour
+        map.forEach(list => list.sort((a, b) => a.time.localeCompare(b.time)));
         return map;
     }, [filteredAppointments]);
 
-    const getAppt = (day: Date, hour: number, minute: number) => {
+    const getAppts = (day: Date, hour: number) => {
         const dStr = day.toISOString().split('T')[0];
         const hStr = hour < 10 ? `0${hour}` : `${hour}`;
-        const mStr = minute < 10 ? `0${minute}` : `${minute}`;
-        return appointmentsMap.get(`${dStr}-${hStr}:${mStr}`);
+        return appointmentsMap.get(`${dStr}-${hStr}`) || [];
     };
 
     const hours = Array.from({ length: 13 }, (_, i) => i + 8); // 8 to 20
-    const minutes = [0, 15, 30, 45];
+
+    const handleEdit = () => {
+        setIsEditing(true);
+        setShowModal(true);
+        // Keep selectedAppointment for the modal to use
+    };
+
+    const handleNewAppointment = (date?: Date, time?: string) => {
+        setModalData({
+            date: date ? date.toISOString().split('T')[0] : undefined,
+            time: time
+        });
+        setShowModal(true);
+    };
+
+    const handleCloseModal = () => {
+        setShowModal(false);
+        setIsEditing(false);
+        setSelectedAppointment(null);
+        setModalData(null);
+    };
 
     return (
         <div className="p-6 h-full flex flex-col">
@@ -86,71 +109,87 @@ export const CalendarView = ({ appointments, patients, user }: CalendarViewProps
                         </span>
                         <button onClick={() => setSelectedDate(new Date(selectedDate.setDate(selectedDate.getDate() + 7)))} className="p-2 hover:bg-slate-50"><ChevronRight size={18} /></button>
                     </div>
-                    <button onClick={() => setShowModal(true)} className="bg-teal-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 shadow-sm hover:bg-teal-700">
+                    <button onClick={() => handleNewAppointment()} className="bg-teal-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 shadow-sm hover:bg-teal-700">
                         <Plus size={18} /> <span>Turno</span>
                     </button>
                 </div>
             </div>
 
             <div className="flex-1 bg-white rounded-xl border shadow-sm overflow-hidden flex flex-col">
-                <div className="grid grid-cols-6 border-b bg-slate-50">
-                    <div className="p-3 text-center text-xs text-slate-400 font-bold border-r">HORA</div>
-                    {weekDays.map((d, i) => (
-                        <div key={i} className={`p-3 text-center border-r ${d.toDateString() === new Date().toDateString() ? 'bg-teal-50' : ''}`}>
-                            <div className="text-xs text-slate-500 uppercase">{d.toLocaleDateString('es-ES', { weekday: 'short' })}</div>
-                            <div className="font-bold">{d.getDate()}</div>
-                        </div>
-                    ))}
+                <div className="flex border-b bg-slate-50 pr-2">
+                    <div className="w-16 p-3 text-center text-xs text-slate-400 font-bold border-r flex-shrink-0">HORA</div>
+                    <div className="flex-1 grid grid-cols-5">
+                        {weekDays.map((d, i) => (
+                            <div key={i} className={`p-3 text-center border-r ${d.toDateString() === new Date().toDateString() ? 'bg-teal-50' : ''}`}>
+                                <div className="text-xs text-slate-500 uppercase">{d.toLocaleDateString('es-ES', { weekday: 'short' })}</div>
+                                <div className="font-bold">{d.getDate()}</div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
                 <div className="flex-1 overflow-y-auto">
                     {hours.map(hour => (
-                        <div key={hour} className="contents">
-                            {minutes.map((minute) => (
-                                <div key={`${hour}-${minute}`} className="grid grid-cols-6 min-h-[40px] border-b last:border-0">
-                                    <div className={`p-1 text-[10px] text-slate-400 text-center border-r flex items-start justify-center ${minute === 0 ? 'font-bold text-slate-600' : ''}`}>
-                                        {minute === 0 ? `${hour}:00` : `:${minute}`}
-                                    </div>
-                                    {weekDays.map((day, i) => {
-                                        const appt = getAppt(day, hour, minute);
-                                        return (
-                                            <div key={i} className="border-r p-0.5 relative group hover:bg-slate-50/50">
-                                                {appt ? (
-                                                    <div className={`w-full h-full rounded p-1 text-[10px] border-l-2 shadow-sm cursor-pointer relative overflow-hidden
-                                                        ${appt.type === 'online' ? 'bg-blue-50 border-blue-300 text-blue-800' : 'bg-teal-50 border-teal-300 text-teal-800'}`}
-                                                        style={{ minHeight: '36px' }}
-                                                    >
+                        <div key={hour} className="flex min-h-[100px] border-b last:border-0">
+                            <div className="w-16 p-2 text-xs text-slate-400 text-center border-r pt-3 font-bold flex-shrink-0">{hour}:00</div>
+                            <div className="flex-1 grid grid-cols-5">
+                                {weekDays.map((day, i) => {
+                                    const appts = getAppts(day, hour);
+                                    return (
+                                        <div key={i} className="border-r p-1 relative group hover:bg-slate-50/50 flex flex-col space-y-1">
+                                            {appts.map(appt => (
+                                                <div key={appt.id}
+                                                    onClick={() => setSelectedAppointment(appt)}
+                                                    className={`w-full rounded p-2 text-xs border-l-4 shadow-sm cursor-pointer relative overflow-hidden transition-all hover:shadow-md
+                                                    ${appt.type === 'online' ? 'bg-blue-50 border-blue-300 text-blue-800' : 'bg-teal-50 border-teal-300 text-teal-800'}`}
+                                                >
+                                                    <div className="flex justify-between items-start">
                                                         <div className="font-bold truncate leading-tight">{appt.patientName}</div>
-                                                        <div className="flex justify-between items-center mt-1">
-                                                            <div className="flex items-center space-x-1 opacity-80 scale-90 origin-left">
-                                                                {appt.type === 'online' ? <Video size={10} /> : <MapPin size={10} />}
-                                                                <span className="truncate max-w-[40px]">{appt.professional || 'General'}</span>
-                                                            </div>
-                                                            {appt.isPaid ? (
-                                                                <CheckCircle size={10} className="text-green-600" />
-                                                            ) : (
-                                                                <span className="text-[8px] font-bold text-red-500">IMPAGO</span>
-                                                            )}
-                                                        </div>
-                                                        {appt.meetLink && (
-                                                            <a href={appt.meetLink} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="block mt-1 text-center bg-blue-100 text-blue-700 rounded py-0.5 hover:bg-blue-200">
-                                                                Unirse
-                                                            </a>
-                                                        )}
-                                                        <button onClick={(e) => { e.stopPropagation(); deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'appointments', appt.id)); }} className="absolute top-0.5 right-0.5 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={10} /></button>
+                                                        <div className="text-[10px] font-mono opacity-80">{appt.time}</div>
                                                     </div>
-                                                ) : (
-                                                    <button onClick={() => setShowModal(true)} className="w-full h-full flex items-center justify-center opacity-0 group-hover:opacity-100 text-teal-300 hover:text-teal-600"><Plus size={12} /></button>
-                                                )}
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            ))}
+                                                    <div className="flex justify-between items-center mt-1">
+                                                        <div className="flex items-center space-x-1 opacity-80 scale-90 origin-left">
+                                                            {appt.type === 'online' ? <Video size={10} /> : <MapPin size={10} />}
+                                                            <span className="truncate max-w-[80px]">{appt.professional || 'General'}</span>
+                                                        </div>
+                                                        {appt.isPaid ? (
+                                                            <CheckCircle size={10} className="text-green-600" />
+                                                        ) : (
+                                                            <span className="text-[8px] font-bold text-red-500">IMPAGO</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            <button onClick={() => handleNewAppointment(day, `${hour < 10 ? '0' + hour : hour}:00`)} className="w-full flex-1 min-h-[20px] flex items-center justify-center opacity-0 group-hover:opacity-100 text-teal-300 hover:text-teal-600 transition-opacity">
+                                                <Plus size={12} />
+                                            </button>
+                                        </div>
+                                    )
+                                })}
+                            </div>
                         </div>
                     ))}
                 </div>
             </div>
-            {showModal && <AppointmentModal onClose={() => setShowModal(false)} patients={patients} user={user} />}
+
+            {showModal && (
+                <AppointmentModal
+                    onClose={handleCloseModal}
+                    patients={patients}
+                    user={user}
+                    existingAppointment={isEditing ? selectedAppointment! : undefined}
+                    initialDate={modalData?.date}
+                    initialTime={modalData?.time}
+                />
+            )}
+
+            {selectedAppointment && !showModal && (
+                <AppointmentDetailsModal
+                    appointment={selectedAppointment}
+                    onClose={() => setSelectedAppointment(null)}
+                    onEdit={handleEdit}
+                    user={user}
+                />
+            )}
         </div>
     );
 };

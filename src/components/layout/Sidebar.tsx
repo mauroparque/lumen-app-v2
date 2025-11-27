@@ -14,7 +14,7 @@ interface SidebarProps {
 
 export const Sidebar = ({ user, currentView, setCurrentView, appointments }: SidebarProps) => {
     return (
-        <aside className="hidden md:flex w-64 flex-col bg-white border-r border-slate-200 z-20 shadow-sm">
+        <aside className="hidden md:flex w-56 flex-col bg-white border-r border-slate-200 z-20 shadow-sm">
             <div className="p-6 border-b border-slate-100">
                 <span className="text-lg font-bold text-teal-600">Lumen<br />Salud Mental</span>
             </div>

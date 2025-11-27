@@ -2,10 +2,16 @@ export type View = 'calendar' | 'patients' | 'finance';
 
 export interface Patient {
     id: string;
-    name: string;
+    name: string; // Computed or full name
+    firstName?: string;
+    lastName?: string;
+    dni?: string;
     email: string;
     phone: string;
     fee?: number;
+    preference?: 'presencial' | 'online';
+    office?: string;
+    professional?: string;
 }
 
 export interface Appointment {
@@ -15,7 +21,7 @@ export interface Appointment {
     patientEmail?: string;
     date: string;
     time: string;
-    duration: number;
+    duration: number; // in minutes
     type: 'presencial' | 'online';
     meetLink?: string;
     status: 'programado' | 'completado' | 'cancelado';

@@ -65,5 +65,16 @@ export const useDataActions = (user: User | null) => {
         return deleteDoc(doc(db, 'artifacts', appId, 'users', user!.uid, collectionName, id));
     };
 
-    return { addPatient, addAppointment, addPayment, deleteItem };
+    const updateAppointment = async (id: string, data: any) => {
+        if (isDemo) {
+            const idx = MOCK_APPOINTMENTS.findIndex(a => a.id === id);
+            if (idx > -1) {
+                MOCK_APPOINTMENTS[idx] = { ...MOCK_APPOINTMENTS[idx], ...data };
+            }
+            return;
+        }
+        return updateDoc(doc(db, 'artifacts', appId, 'users', user!.uid, 'appointments', id), data);
+    };
+
+    return { addPatient, addAppointment, updateAppointment, addPayment, deleteItem };
 };

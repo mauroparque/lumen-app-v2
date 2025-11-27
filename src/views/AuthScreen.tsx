@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { signInWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
+import { auth, db, appId } from '../lib/firebase';
 
 export const AuthScreen = ({ onDemoLogin }: { onDemoLogin?: () => void }) => {
     const [email, setEmail] = useState('');
@@ -10,7 +11,23 @@ export const AuthScreen = ({ onDemoLogin }: { onDemoLogin?: () => void }) => {
     const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await signInWithEmailAndPassword(auth, email, password);
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+
+            // Lazy Creation Logic
+            const userRef = doc(db, 'artifacts', appId, 'users', user.uid);
+            const userSnap = await getDoc(userRef);
+
+            if (!userSnap.exists()) {
+                await setDoc(userRef, {
+                    email: user.email,
+                    displayName: user.displayName || 'Profesional Lumen',
+                    createdAt: Timestamp.now(),
+                    role: 'admin',
+                    settings: { notifications: true }
+                });
+                console.log('Perfil creado en Firestore:', user.uid);
+            }
         } catch (err: any) { setError(err.message); }
     };
 

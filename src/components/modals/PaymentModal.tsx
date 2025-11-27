@@ -5,6 +5,7 @@ import { User } from 'firebase/auth';
 import { Appointment } from '../../types';
 import { ModalOverlay } from '../ui';
 import { DollarSign, CheckCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface PaymentModalProps {
     appointment: Appointment;
@@ -18,24 +19,30 @@ export const PaymentModal = ({ appointment, onClose, user }: PaymentModalProps) 
 
     const handlePay = async (e: React.FormEvent) => {
         e.preventDefault();
-        const batch = writeBatch(db);
+        try {
+            const batch = writeBatch(db);
 
-        const paymentRef = doc(collection(db, 'artifacts', appId, 'users', user.uid, 'payments'));
-        batch.set(paymentRef, {
-            appointmentId: appointment.id,
-            patientName: appointment.patientName,
-            amount: parseFloat(amount),
-            concept: concept,
-            date: Timestamp.now()
-        });
+            const paymentRef = doc(collection(db, 'artifacts', appId, 'users', user.uid, 'payments'));
+            batch.set(paymentRef, {
+                appointmentId: appointment.id,
+                patientName: appointment.patientName,
+                amount: parseFloat(amount),
+                concept: concept,
+                date: Timestamp.now()
+            });
 
-        const apptRef = doc(db, 'artifacts', appId, 'users', user.uid, 'appointments', appointment.id);
-        batch.update(apptRef, {
-            isPaid: true
-        });
+            const apptRef = doc(db, 'artifacts', appId, 'users', user.uid, 'appointments', appointment.id);
+            batch.update(apptRef, {
+                isPaid: true
+            });
 
-        await batch.commit();
-        onClose();
+            await batch.commit();
+            toast.success('Pago registrado correctamente');
+            onClose();
+        } catch (error) {
+            console.error(error);
+            toast.error('Error al registrar el pago');
+        }
     };
 
     return (

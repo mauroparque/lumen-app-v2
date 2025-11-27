@@ -6,6 +6,7 @@ import { Appointment, Payment } from '../types';
 import { AlertTriangle, AlertCircle, CheckCircle, Trash2 } from 'lucide-react';
 import { PaymentModal } from '../components/modals/PaymentModal';
 import { useFinanceData } from '../hooks/useFinanceData';
+import { toast } from 'sonner';
 
 interface FinanceViewProps {
     user: User;
@@ -19,6 +20,18 @@ export const FinanceView = ({ user }: FinanceViewProps) => {
 
     const totalIncome = payments.reduce((acc: number, p: Payment) => acc + p.amount, 0);
     const totalDebt = debts.reduce((acc: number, a: Appointment) => acc + (a.price || 0), 0);
+
+    const handleDeletePayment = async (payment: Payment) => {
+        if (confirm('¿Eliminar registro de pago?')) {
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'payments', payment.id));
+                toast.success('Pago eliminado correctamente');
+            } catch (error) {
+                console.error(error);
+                toast.error('Error al eliminar el pago');
+            }
+        }
+    };
 
     return (
         <div className="p-6 max-w-5xl mx-auto">
@@ -97,7 +110,7 @@ export const FinanceView = ({ user }: FinanceViewProps) => {
                                     </td>
                                     <td className="p-4 font-mono text-teal-600 font-bold">+${p.amount}</td>
                                     <td className="p-4 text-right">
-                                        <button onClick={() => { if (confirm('¿Eliminar registro de pago?')) deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'payments', p.id)); }} className="text-slate-300 hover:text-red-500"><Trash2 size={16} /></button>
+                                        <button onClick={() => handleDeletePayment(p)} className="text-slate-300 hover:text-red-500"><Trash2 size={16} /></button>
                                     </td>
                                 </tr>
                             ))}

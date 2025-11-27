@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { onAuthStateChanged, User, signInWithCustomToken } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { View } from './types';
+import { Toaster } from 'sonner';
 
 // Components
 import { Sidebar } from './components/layout/Sidebar';
@@ -41,6 +42,7 @@ export default function LumenApp() {
 
     return (
         <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
+            <Toaster position="top-center" richColors />
             <Sidebar
                 user={activeUser}
                 currentView={currentView}

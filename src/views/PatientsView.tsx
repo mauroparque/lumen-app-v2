@@ -6,6 +6,7 @@ import { Patient } from '../types';
 import { Trash2 } from 'lucide-react';
 import { PatientModal } from '../components/modals/PatientModal';
 import { usePatients } from '../hooks/usePatients';
+import { toast } from 'sonner';
 
 interface PatientsViewProps {
     user: User;
@@ -15,6 +16,18 @@ export const PatientsView = ({ user }: PatientsViewProps) => {
     const [showAdd, setShowAdd] = useState(false);
     const { patients } = usePatients(user);
 
+    const handleDelete = async (patient: Patient) => {
+        if (confirm(`¿Estás seguro de que deseas eliminar a ${patient.name}?`)) {
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'patients', patient.id));
+                toast.success(`Paciente ${patient.name} eliminado`);
+            } catch (error) {
+                console.error(error);
+                toast.error('Error al eliminar el paciente');
+            }
+        }
+    };
+
     return (
         <div className="p-6 max-w-4xl mx-auto">
             <div className="flex justify-between mb-6"><h1 className="text-2xl font-bold">Pacientes</h1><button onClick={() => setShowAdd(true)} className="bg-teal-600 text-white px-3 py-2 rounded hover:bg-teal-700">+ Nuevo</button></div>
@@ -22,7 +35,7 @@ export const PatientsView = ({ user }: PatientsViewProps) => {
                 {patients.map((p: Patient) => (
                     <div key={p.id} className="p-4 border-b flex justify-between hover:bg-slate-50">
                         <div><div className="font-bold">{p.name}</div><div className="text-sm text-slate-500">{p.email}</div></div>
-                        <button onClick={() => { if (confirm('Borrar?')) deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'patients', p.id)); }} className="text-slate-300 hover:text-red-500"><Trash2 size={16} /></button>
+                        <button onClick={() => handleDelete(p)} className="text-slate-300 hover:text-red-500"><Trash2 size={16} /></button>
                     </div>
                 ))}
             </div>

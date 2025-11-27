@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { doc, deleteDoc } from 'firebase/firestore';
-import { db, appId } from '../lib/firebase';
+import { db, appId, CLINIC_ID } from '../lib/firebase';
 import { User } from 'firebase/auth';
 import { Appointment, Payment } from '../types';
 import { AlertTriangle, AlertCircle, CheckCircle, Trash2, Clock, Calendar } from 'lucide-react';
@@ -40,7 +40,7 @@ export const FinanceView = ({ user }: FinanceViewProps) => {
     const handleDeletePayment = async (payment: Payment) => {
         if (confirm('¿Eliminar registro de pago?')) {
             try {
-                await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'payments', payment.id));
+                await deleteDoc(doc(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'payments', payment.id));
                 toast.success('Pago eliminado correctamente');
             } catch (error) {
                 console.error(error);

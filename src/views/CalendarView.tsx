@@ -109,9 +109,9 @@ export const CalendarView = ({ user, profile }: CalendarViewProps) => {
 
     const filteredAppointments = useMemo(() => {
         if (selectedProfessional === 'all') return appointments;
-        if (selectedProfessional === 'me') return appointments.filter(app => app.professional === user.displayName);
+        if (selectedProfessional === 'me') return appointments.filter(app => app.professional === profile?.name);
         return appointments.filter(app => app.professional === selectedProfessional);
-    }, [appointments, selectedProfessional, user.displayName]);
+    }, [appointments, selectedProfessional, profile?.name]);
 
     // Index appointments by date-hour for O(1) access
     const appointmentsMap = useMemo(() => {

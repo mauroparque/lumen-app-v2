@@ -28,6 +28,7 @@ export interface Appointment {
     isPaid?: boolean;
     price?: number;
     professional?: string;
+    office?: string;
 }
 
 export interface Payment {

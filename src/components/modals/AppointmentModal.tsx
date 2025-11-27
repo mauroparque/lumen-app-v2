@@ -31,14 +31,20 @@ export const AppointmentModal = ({ onClose, patients, user, profile, existingApp
         duration: existingAppointment?.duration || 45,
         type: existingAppointment?.type || 'presencial',
         price: existingAppointment?.price || 5000,
-        professional: existingAppointment?.professional || profile?.name || user.displayName || ''
+        professional: existingAppointment?.professional || profile?.name || user.displayName || '',
+        office: existingAppointment?.office || ''
     });
 
     useEffect(() => {
         if (!existingAppointment && form.patientId) {
             const selectedPatient = patients.find(p => p.id === form.patientId);
-            if (selectedPatient && selectedPatient.fee) {
-                setForm(prev => ({ ...prev, price: selectedPatient.fee ?? 0 }));
+            if (selectedPatient) {
+                setForm(prev => ({
+                    ...prev,
+                    price: selectedPatient.fee || prev.price,
+                    type: selectedPatient.preference || prev.type,
+                    office: selectedPatient.office || prev.office
+                }));
             }
         }
     }, [form.patientId, patients, existingAppointment]);
@@ -125,6 +131,19 @@ export const AppointmentModal = ({ onClose, patients, user, profile, existingApp
                             <input type="number" className="w-full p-2 border rounded-lg" value={form.price} onChange={e => setForm({ ...form, price: Number(e.target.value) })} />
                         </div>
                     </div>
+
+                    {form.type === 'presencial' && (
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Consultorio / Ubicación</label>
+                            <input
+                                type="text"
+                                className="w-full p-2 border rounded-lg"
+                                value={form.office}
+                                onChange={e => setForm({ ...form, office: e.target.value })}
+                                placeholder="Ej: Consultorio 1, Piso 2"
+                            />
+                        </div>
+                    )}
 
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Profesional (Opcional)</label>

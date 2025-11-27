@@ -32,6 +32,26 @@ export interface Appointment {
     hasNotes?: boolean;
 }
 
+export interface Payment {
+    id: string;
+    appointmentId?: string;
+    patientId?: string;
+    patientName: string;
+    amount: number;
+    date: any; // Firebase Timestamp
+    concept: string;
+}
+
+export interface ClinicalNote {
+    id: string;
+    patientId: string;
+    appointmentId: string;
+    content: string;
+    attachments: string[];
+    createdAt: any;
+    createdBy: string;
+}
+
 export interface StaffProfile {
     uid: string;
     email: string;

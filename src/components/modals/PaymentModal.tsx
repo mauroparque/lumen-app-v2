@@ -25,6 +25,7 @@ export const PaymentModal = ({ appointment, onClose, user }: PaymentModalProps) 
             const paymentRef = doc(collection(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'payments'));
             batch.set(paymentRef, {
                 appointmentId: appointment.id,
+                patientId: appointment.patientId,
                 patientName: appointment.patientName,
                 amount: parseFloat(amount),
                 concept: concept,

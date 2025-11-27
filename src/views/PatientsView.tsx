@@ -5,6 +5,7 @@ import { User } from 'firebase/auth';
 import { Patient } from '../types';
 import { Trash2, Search, Edit2 } from 'lucide-react';
 import { PatientModal } from '../components/modals/PatientModal';
+import { PatientDetailsDrawer } from '../components/drawers/PatientDetailsDrawer';
 import { usePatients } from '../hooks/usePatients';
 import { toast } from 'sonner';
 
@@ -18,6 +19,7 @@ interface PatientsViewProps {
 export const PatientsView = ({ user, profile }: PatientsViewProps) => {
     const [showAdd, setShowAdd] = useState(false);
     const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
+    const [viewingPatient, setViewingPatient] = useState<Patient | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const { patients } = usePatients(user);
 
@@ -26,7 +28,8 @@ export const PatientsView = ({ user, profile }: PatientsViewProps) => {
         p.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const handleDelete = async (patient: Patient) => {
+    const handleDelete = async (e: React.MouseEvent, patient: Patient) => {
+        e.stopPropagation();
         if (confirm(`¿Estás seguro de que deseas eliminar a ${patient.name}?`)) {
             try {
                 await deleteDoc(doc(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'patients', patient.id));
@@ -36,6 +39,11 @@ export const PatientsView = ({ user, profile }: PatientsViewProps) => {
                 toast.error('Error al eliminar el paciente');
             }
         }
+    };
+
+    const handleEdit = (e: React.MouseEvent, patient: Patient) => {
+        e.stopPropagation();
+        setEditingPatient(patient);
     };
 
     return (
@@ -65,21 +73,25 @@ export const PatientsView = ({ user, profile }: PatientsViewProps) => {
                     </div>
                 ) : (
                     filteredPatients.map((p: Patient) => (
-                        <div key={p.id} className="p-4 border-b last:border-b-0 flex justify-between items-center hover:bg-slate-50 transition-colors">
+                        <div
+                            key={p.id}
+                            onClick={() => setViewingPatient(p)}
+                            className="p-4 border-b last:border-b-0 flex justify-between items-center hover:bg-slate-50 transition-colors cursor-pointer"
+                        >
                             <div>
                                 <div className="font-bold text-slate-800">{p.name}</div>
                                 <div className="text-sm text-slate-500">{p.email}</div>
                             </div>
                             <div className="flex items-center gap-2">
                                 <button
-                                    onClick={() => setEditingPatient(p)}
+                                    onClick={(e) => handleEdit(e, p)}
                                     className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
                                     title="Editar"
                                 >
                                     <Edit2 size={18} />
                                 </button>
                                 <button
-                                    onClick={() => handleDelete(p)}
+                                    onClick={(e) => handleDelete(e, p)}
                                     className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                     title="Eliminar"
                                 >
@@ -100,6 +112,14 @@ export const PatientsView = ({ user, profile }: PatientsViewProps) => {
                     user={user}
                     profile={profile}
                     existingPatient={editingPatient}
+                />
+            )}
+
+            {viewingPatient && (
+                <PatientDetailsDrawer
+                    patient={viewingPatient}
+                    onClose={() => setViewingPatient(null)}
+                    user={user}
                 />
             )}
         </div>

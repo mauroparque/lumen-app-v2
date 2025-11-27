@@ -29,7 +29,7 @@ export const AppointmentModal = ({ onClose, patients, user, existingAppointment,
         time: existingAppointment?.time || initialTime || '09:00',
         type: existingAppointment?.type || 'presencial',
         price: existingAppointment?.price || 5000,
-        professional: existingAppointment?.professional || user.displayName || user.email || ''
+        professional: existingAppointment?.professional || localStorage.getItem('lumen_last_professional') || user.displayName || user.email || ''
     });
 
     useEffect(() => {
@@ -49,6 +49,7 @@ export const AppointmentModal = ({ onClose, patients, user, existingAppointment,
         if (!patient) return;
 
         const professionalName = form.professional || user.displayName || user.email || 'Profesional';
+        localStorage.setItem('lumen_last_professional', professionalName);
 
         try {
             if (existingAppointment) {

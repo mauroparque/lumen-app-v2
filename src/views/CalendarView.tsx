@@ -301,7 +301,7 @@ export const CalendarView = ({ user }: CalendarViewProps) => {
                     </>
                 ) : (
                     <div className="flex flex-col h-full overflow-hidden">
-                        <div className="grid grid-cols-7 border-b bg-slate-50 min-h-[40px] shrink-0">
+                        <div className="grid grid-cols-7 border-b bg-slate-50 min-h-[40px] shrink-0 pr-4">
                             {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(day => (
                                 <div key={day} className="p-2 text-center text-xs font-bold text-slate-500 border-r last:border-r-0 flex items-center justify-center">{day}</div>
                             ))}

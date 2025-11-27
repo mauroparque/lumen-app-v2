@@ -1,5 +1,5 @@
 import { deleteDoc, doc } from 'firebase/firestore';
-import { db, appId } from '../../lib/firebase';
+import { db, appId, CLINIC_ID } from '../../lib/firebase';
 import { User } from 'firebase/auth';
 import { Appointment } from '../../types';
 import { ModalOverlay } from '../ui';
@@ -18,7 +18,7 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
     const handleDelete = async () => {
         if (confirm('¿Estás seguro de que deseas eliminar este turno?')) {
             try {
-                await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'appointments', appointment.id));
+                await deleteDoc(doc(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'appointments', appointment.id));
                 toast.success('Turno eliminado');
                 onClose();
             } catch (error) {

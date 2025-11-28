@@ -44,6 +44,24 @@ export const AppointmentModal = ({ onClose, patients, user, profile, existingApp
     const [recurrenceCount, setRecurrenceCount] = useState(4);
     const [recurrenceFrequency, setRecurrenceFrequency] = useState<'WEEKLY' | 'BIWEEKLY'>('WEEKLY');
 
+    // Restaurar autocompletado de datos del paciente
+    useEffect(() => {
+        if (!existingAppointment && form.patientId) {
+            const selectedPatient = patients.find(p => p.id === form.patientId);
+            if (selectedPatient) {
+                setForm(prev => ({
+                    ...prev,
+                    // Si el paciente tiene honorarios, usarlos. Si no, mantener el default.
+                    price: selectedPatient.fee || prev.price,
+                    // Si el paciente tiene preferencia, usarla.
+                    type: selectedPatient.preference || prev.type,
+                    // Si es presencial y tiene oficina, usarla.
+                    office: selectedPatient.office || prev.office
+                }));
+            }
+        }
+    }, [form.patientId, patients, existingAppointment]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {

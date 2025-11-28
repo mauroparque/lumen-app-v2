@@ -30,6 +30,8 @@ export interface Appointment {
     professional?: string;
     office?: string;
     hasNotes?: boolean;
+    googleEventId?: string;
+    googleMeetLink?: string;
 }
 
 export interface Payment {

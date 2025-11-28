@@ -106,8 +106,8 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
                     <button
                         onClick={() => setActiveTab('details')}
                         className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'details'
-                                ? 'border-teal-600 text-teal-700'
-                                : 'border-transparent text-slate-500 hover:text-slate-700'
+                            ? 'border-teal-600 text-teal-700'
+                            : 'border-transparent text-slate-500 hover:text-slate-700'
                             }`}
                     >
                         Detalles del Turno
@@ -115,8 +115,8 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
                     <button
                         onClick={() => setActiveTab('history')}
                         className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'history'
-                                ? 'border-teal-600 text-teal-700'
-                                : 'border-transparent text-slate-500 hover:text-slate-700'
+                            ? 'border-teal-600 text-teal-700'
+                            : 'border-transparent text-slate-500 hover:text-slate-700'
                             }`}
                     >
                         Historia Clínica
@@ -146,10 +146,21 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
                                     <div>
                                         <div className="font-medium text-slate-900">Modalidad</div>
                                         <div className="text-sm text-slate-500 capitalize">{appointment.type}</div>
-                                        {appointment.type === 'online' && appointment.meetLink && (
-                                            <a href={appointment.meetLink} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline block mt-1">
-                                                Unirse a la reunión
+                                        {appointment.type === 'online' && (appointment.googleMeetLink || appointment.meetLink) && (
+                                            <a
+                                                href={appointment.googleMeetLink || appointment.meetLink}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="text-sm text-blue-600 hover:underline block mt-1 flex items-center"
+                                            >
+                                                <Video size={14} className="mr-1" />
+                                                {appointment.googleMeetLink ? 'Unirse con Google Meet' : 'Unirse a la reunión'}
                                             </a>
+                                        )}
+                                        {appointment.googleEventId && (
+                                            <div className="flex items-center mt-1 text-xs text-green-600 font-medium" title="Sincronizado con Google Calendar">
+                                                <CheckCircle size={12} className="mr-1" /> Sincronizado con Google
+                                            </div>
                                         )}
                                         {appointment.type === 'presencial' && appointment.office && (
                                             <div className="text-sm text-slate-500 mt-1">{appointment.office}</div>

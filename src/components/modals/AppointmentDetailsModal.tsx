@@ -4,10 +4,11 @@ import { db, appId, CLINIC_ID } from '../../lib/firebase';
 import { User } from 'firebase/auth';
 import { Appointment } from '../../types';
 import { ModalOverlay } from '../ui';
-import { Edit2, Trash2, Video, MapPin, CheckCircle, FileText, User as UserIcon, DollarSign, Calendar as CalendarIcon, Paperclip, Save, X } from 'lucide-react';
+import { Edit2, Trash2, Video, MapPin, CheckCircle, FileText, User as UserIcon, DollarSign, Calendar as CalendarIcon, Paperclip, Save, X, Download, RefreshCw, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { requestInvoice } from '../../lib/queue';
 import { useClinicalNotes } from '../../hooks/useClinicalNotes';
+import { useBillingStatus } from '../../hooks/useBillingStatus';
 
 interface AppointmentDetailsModalProps {
     appointment: Appointment;
@@ -24,6 +25,9 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
     const [content, setContent] = useState('');
     const [attachments, setAttachments] = useState<string[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const [currentRequestId, setCurrentRequestId] = useState<string | null>(null);
+    const { status: billingStatus, invoiceUrl, loading: billingLoading, error: billingError } = useBillingStatus(currentRequestId);
 
     useEffect(() => {
         if (note) {
@@ -46,11 +50,15 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
     };
 
     const handleRequestInvoice = async () => {
-        toast.promise(requestInvoice(appointment.id, user), {
-            loading: 'Solicitando factura...',
-            success: 'Solicitud enviada a facturación',
-            error: 'Error al solicitar factura'
-        });
+        try {
+            const toastId = toast.loading('Solicitando factura...');
+            const requestId = await requestInvoice(appointment.id, user);
+            setCurrentRequestId(requestId);
+            toast.success('Solicitud enviada a facturación', { id: toastId });
+        } catch (error) {
+            console.error(error);
+            toast.error('Error al solicitar factura');
+        }
     };
 
     const handleSaveNote = async () => {
@@ -201,12 +209,47 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
 
                             {appointment.isPaid && (
                                 <div className="pt-4 border-t border-slate-100">
-                                    <button
-                                        onClick={handleRequestInvoice}
-                                        className="w-full py-2.5 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 font-medium flex items-center justify-center transition-colors"
-                                    >
-                                        <FileText size={18} className="mr-2" /> Solicitar Factura
-                                    </button>
+                                    {billingStatus === 'completed' && invoiceUrl ? (
+                                        <a
+                                            href={invoiceUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="w-full py-2.5 bg-green-50 border border-green-200 text-green-700 rounded-xl hover:bg-green-100 font-medium flex items-center justify-center transition-colors"
+                                        >
+                                            <Download size={18} className="mr-2" /> Ver Factura
+                                        </a>
+                                    ) : billingStatus === 'error' || billingStatus === 'error_sending' || billingStatus === 'error_config' ? (
+                                        <div className="flex flex-col space-y-2">
+                                            <div className="text-sm text-red-600 text-center bg-red-50 p-2 rounded-lg">
+                                                Error al generar factura: {billingError || 'Error desconocido'}
+                                            </div>
+                                            <button
+                                                onClick={handleRequestInvoice}
+                                                className="w-full py-2.5 border border-red-200 text-red-600 rounded-xl hover:bg-red-50 font-medium flex items-center justify-center transition-colors"
+                                            >
+                                                <RefreshCw size={18} className="mr-2" /> Reintentar
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={handleRequestInvoice}
+                                            disabled={billingLoading}
+                                            className={`w-full py-2.5 border rounded-xl font-medium flex items-center justify-center transition-colors ${billingLoading
+                                                ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed'
+                                                : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                                                }`}
+                                        >
+                                            {billingLoading ? (
+                                                <>
+                                                    <Loader2 size={18} className="mr-2 animate-spin" /> Solicitando...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <FileText size={18} className="mr-2" /> Solicitar Factura
+                                                </>
+                                            )}
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>

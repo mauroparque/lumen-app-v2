@@ -108,9 +108,9 @@ export const AppointmentModal = ({ onClose, patients, user, profile, existingApp
 
     return (
         <ModalOverlay onClose={onClose}>
-            <div className="p-6">
-                <h2 className="text-xl font-bold mb-4 text-slate-800">{existingAppointment ? 'Editar Turno' : 'Nuevo Turno'}</h2>
-                <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="p-5">
+                <h2 className="text-xl font-bold mb-3 text-slate-800">{existingAppointment ? 'Editar Turno' : 'Nuevo Turno'}</h2>
+                <form onSubmit={handleSubmit} className="space-y-3">
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Paciente</label>
                         <select className="w-full p-2 border rounded-lg bg-white" value={form.patientId} onChange={e => setForm({ ...form, patientId: e.target.value })} required>
@@ -119,7 +119,7 @@ export const AppointmentModal = ({ onClose, patients, user, profile, existingApp
                         </select>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Fecha</label>
                             <input type="date" className="w-full p-2 border rounded-lg" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} required />
@@ -181,7 +181,7 @@ export const AppointmentModal = ({ onClose, patients, user, profile, existingApp
                         </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Tipo</label>
                             <select className="w-full p-2 border rounded-lg bg-white" value={form.type} onChange={e => setForm({ ...form, type: e.target.value as any })}>
@@ -189,24 +189,23 @@ export const AppointmentModal = ({ onClose, patients, user, profile, existingApp
                                 <option value="online">Online</option>
                             </select>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Consulta</label>
-                                <select
-                                    className="w-full p-2 border rounded-lg bg-white"
-                                    value={form.consultationType}
-                                    onChange={e => setForm({ ...form, consultationType: e.target.value })}
-                                >
-                                    {CONSULTATION_TYPES.map(type => (
-                                        <option key={type} value={type}>{type}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Valor Sesión</label>
-                                <input type="number" className="w-full p-2 border rounded-lg" value={form.price} onChange={e => setForm({ ...form, price: Number(e.target.value) })} />
-                            </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Valor Sesión</label>
+                            <input type="number" className="w-full p-2 border rounded-lg" value={form.price} onChange={e => setForm({ ...form, price: Number(e.target.value) })} />
                         </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Consulta</label>
+                        <select
+                            className="w-full p-2 border rounded-lg bg-white"
+                            value={form.consultationType}
+                            onChange={e => setForm({ ...form, consultationType: e.target.value })}
+                        >
+                            {CONSULTATION_TYPES.map(type => (
+                                <option key={type} value={type}>{type}</option>
+                            ))}
+                        </select>
                     </div>
 
                     {form.type === 'presencial' && (

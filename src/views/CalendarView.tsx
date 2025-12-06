@@ -34,7 +34,7 @@ export const CalendarView = ({ user, profile }: CalendarViewProps) => {
 
     const endOfRange = new Date(startOfRange);
     if (viewMode === 'week') {
-        endOfRange.setDate(startOfRange.getDate() + 4); // Friday
+        endOfRange.setDate(startOfRange.getDate() + 5); // Saturday
     } else {
         endOfRange.setMonth(startOfRange.getMonth() + 1);
         endOfRange.setDate(0); // Last day of month
@@ -56,7 +56,7 @@ export const CalendarView = ({ user, profile }: CalendarViewProps) => {
 
     const { patients } = usePatients(user);
 
-    const weekDays = Array.from({ length: 5 }, (_, i) => {
+    const weekDays = Array.from({ length: 6 }, (_, i) => {
         const d = new Date(startOfRange);
         if (viewMode === 'week') {
             d.setDate(startOfRange.getDate() + i);
@@ -244,7 +244,7 @@ export const CalendarView = ({ user, profile }: CalendarViewProps) => {
                         <>
                             <div className="flex border-b bg-slate-50 pr-1 md:pr-4">
                                 <div className="w-10 md:w-16 p-1 md:p-3 text-center text-[10px] md:text-xs text-slate-400 font-bold border-r flex-shrink-0 flex items-center justify-center">HORA</div>
-                                <div className="flex-1 grid grid-cols-5">
+                                <div className="flex-1 grid grid-cols-6">
                                     {weekDays.map((d, i) => (
                                         <div key={i} className={`p-1 md:p-3 text-center border-r ${d.toDateString() === new Date().toDateString() ? 'bg-teal-50' : ''}`}>
                                             <div className="text-[8px] md:text-xs text-slate-500 uppercase truncate">{d.toLocaleDateString('es-ES', { weekday: 'short' })}</div>
@@ -257,7 +257,7 @@ export const CalendarView = ({ user, profile }: CalendarViewProps) => {
                                 {hours.map(hour => (
                                     <div key={hour} className="flex min-h-[80px] md:min-h-[100px] border-b last:border-0">
                                         <div className="w-10 md:w-16 p-1 md:p-2 text-[10px] md:text-xs text-slate-400 text-center border-r pt-3 font-bold flex-shrink-0">{hour}:00</div>
-                                        <div className="flex-1 grid grid-cols-5">
+                                        <div className="flex-1 grid grid-cols-6">
                                             {weekDays.map((day, i) => {
                                                 const appts = getAppts(day, hour);
                                                 return (

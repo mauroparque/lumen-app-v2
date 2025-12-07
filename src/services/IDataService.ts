@@ -1,4 +1,4 @@
-import { Patient, Appointment, Payment } from '../types';
+import { Patient, Appointment, Payment, PatientInput, AppointmentInput, PaymentInput } from '../types';
 
 export interface IDataService {
     // Lectura (Suscripciones en tiempo real)
@@ -7,18 +7,18 @@ export interface IDataService {
     subscribeToFinance(onUnpaid: (data: Appointment[]) => void, onPayments: (data: Payment[]) => void): () => void;
 
     // Escritura (Promesas)
-    addPatient(patient: Omit<Patient, 'id'>): Promise<string>;
+    addPatient(patient: PatientInput): Promise<string>;
     updatePatient(id: string, data: Partial<Patient>): Promise<void>;
     deletePatient(id: string): Promise<void>;
 
-    addAppointment(appointment: Omit<Appointment, 'id'>): Promise<string>;
-    addRecurringAppointments(baseAppointment: Omit<Appointment, 'id'>, dates: string[], recurrenceRule?: string): Promise<void>;
+    addAppointment(appointment: AppointmentInput): Promise<string>;
+    addRecurringAppointments(baseAppointment: AppointmentInput, dates: string[], recurrenceRule?: string): Promise<void>;
     updateAppointment(id: string, data: Partial<Appointment>): Promise<void>;
     deleteAppointment(id: string): Promise<void>;
 
-    addPayment(payment: Omit<Payment, 'id'>, appointmentId?: string): Promise<string>;
+    addPayment(payment: PaymentInput, appointmentId?: string): Promise<string>;
     deletePayment(id: string): Promise<void>;
 
     // Facturación
-    requestBatchInvoice(appointments: any[], patientData: any): Promise<string>;
+    requestBatchInvoice(appointments: Appointment[], patientData: any): Promise<string>;
 }

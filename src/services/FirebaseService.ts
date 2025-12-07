@@ -1,23 +1,18 @@
 import { collection, doc, query, where, orderBy, limit, onSnapshot, addDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore';
-import { db, appId, CLINIC_ID } from '../lib/firebase';
+import { db } from '../lib/firebase';
+import { PATIENTS_COLLECTION, APPOINTMENTS_COLLECTION, PAYMENTS_COLLECTION, BILLING_QUEUE_COLLECTION } from '../lib/routes';
 import { IDataService } from './IDataService';
-import { Patient, Appointment, Payment } from '../types';
+import { Patient, Appointment, Payment, PatientInput, AppointmentInput, PaymentInput } from '../types';
 
 export class FirebaseService implements IDataService {
     private uid: string;
-    private baseUrl: string;
 
     constructor(uid: string) {
         this.uid = uid;
-        this.baseUrl = `artifacts/${appId}/clinics/${CLINIC_ID}`;
-    }
-
-    private getCollectionRef(name: string) {
-        return collection(db, this.baseUrl, name);
     }
 
     subscribeToPatients(onData: (data: Patient[]) => void): () => void {
-        const q = query(this.getCollectionRef('patients'));
+        const q = query(collection(db, PATIENTS_COLLECTION));
 
         return onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Patient));
@@ -29,7 +24,7 @@ export class FirebaseService implements IDataService {
 
     subscribeToAppointments(start: string, end: string, onData: (data: Appointment[]) => void): () => void {
         const q = query(
-            this.getCollectionRef('appointments'),
+            collection(db, APPOINTMENTS_COLLECTION),
             where('date', '>=', start),
             where('date', '<=', end)
         );
@@ -44,13 +39,13 @@ export class FirebaseService implements IDataService {
 
     subscribeToFinance(onUnpaid: (data: Appointment[]) => void, onPayments: (data: Payment[]) => void): () => void {
         const unpaidQuery = query(
-            this.getCollectionRef('appointments'),
+            collection(db, APPOINTMENTS_COLLECTION),
             where('isPaid', '==', false),
             where('status', '!=', 'cancelado')
         );
 
         const paymentsQuery = query(
-            this.getCollectionRef('payments'),
+            collection(db, PAYMENTS_COLLECTION),
             orderBy('date', 'desc'),
             limit(50)
         );
@@ -72,41 +67,41 @@ export class FirebaseService implements IDataService {
         };
     }
 
-    async addPatient(patient: Omit<Patient, 'id'>): Promise<string> {
+    async addPatient(patient: PatientInput): Promise<string> {
         const data = {
             ...patient,
             createdByUid: this.uid
         };
-        const docRef = await addDoc(this.getCollectionRef('patients'), data);
+        const docRef = await addDoc(collection(db, PATIENTS_COLLECTION), data);
         return docRef.id;
     }
 
     async updatePatient(id: string, data: Partial<Patient>): Promise<void> {
-        const docRef = doc(db, this.baseUrl, 'patients', id);
+        const docRef = doc(db, PATIENTS_COLLECTION, id);
         await updateDoc(docRef, data);
     }
 
     async deletePatient(id: string): Promise<void> {
-        const docRef = doc(db, this.baseUrl, 'patients', id);
+        const docRef = doc(db, PATIENTS_COLLECTION, id);
         await deleteDoc(docRef);
     }
 
-    async addAppointment(appointment: Omit<Appointment, 'id'>): Promise<string> {
+    async addAppointment(appointment: AppointmentInput): Promise<string> {
         const data = {
             ...appointment,
             status: appointment.status || 'programado',
             createdByUid: this.uid
         };
-        const docRef = await addDoc(this.getCollectionRef('appointments'), data);
+        const docRef = await addDoc(collection(db, APPOINTMENTS_COLLECTION), data);
         return docRef.id;
     }
 
-    async addRecurringAppointments(baseAppointment: Omit<Appointment, 'id'>, dates: string[], recurrenceRule: string = 'WEEKLY'): Promise<void> {
+    async addRecurringAppointments(baseAppointment: AppointmentInput, dates: string[], recurrenceRule: string = 'WEEKLY'): Promise<void> {
         const batch = writeBatch(db);
         const seriesId = crypto.randomUUID();
 
         dates.forEach((date, index) => {
-            const docRef = doc(this.getCollectionRef('appointments'));
+            const docRef = doc(collection(db, APPOINTMENTS_COLLECTION));
             const appointmentData = {
                 ...baseAppointment,
                 date,
@@ -124,18 +119,18 @@ export class FirebaseService implements IDataService {
     }
 
     async updateAppointment(id: string, data: Partial<Appointment>): Promise<void> {
-        const docRef = doc(db, this.baseUrl, 'appointments', id);
+        const docRef = doc(db, APPOINTMENTS_COLLECTION, id);
         await updateDoc(docRef, data);
     }
 
     async deleteAppointment(id: string): Promise<void> {
-        const docRef = doc(db, this.baseUrl, 'appointments', id);
+        const docRef = doc(db, APPOINTMENTS_COLLECTION, id);
         await deleteDoc(docRef);
     }
 
-    async addPayment(payment: Omit<Payment, 'id'>, appointmentId?: string): Promise<string> {
+    async addPayment(payment: PaymentInput, appointmentId?: string): Promise<string> {
         const batch = writeBatch(db);
-        const paymentRef = doc(this.getCollectionRef('payments'));
+        const paymentRef = doc(collection(db, PAYMENTS_COLLECTION));
 
         batch.set(paymentRef, {
             ...payment,
@@ -144,7 +139,7 @@ export class FirebaseService implements IDataService {
         });
 
         if (appointmentId) {
-            const apptRef = doc(db, this.baseUrl, 'appointments', appointmentId);
+            const apptRef = doc(db, APPOINTMENTS_COLLECTION, appointmentId);
             batch.update(apptRef, { isPaid: true });
         }
 
@@ -153,12 +148,12 @@ export class FirebaseService implements IDataService {
     }
 
     async deletePayment(id: string): Promise<void> {
-        const docRef = doc(db, this.baseUrl, 'payments', id);
+        const docRef = doc(db, PAYMENTS_COLLECTION, id);
         await deleteDoc(docRef);
     }
 
-    async requestBatchInvoice(appointments: any[], patientData: any): Promise<string> {
-        const queueRef = collection(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'integrations', 'billing', 'queue');
+    async requestBatchInvoice(appointments: Appointment[], patientData: any): Promise<string> {
+        const queueRef = collection(db, BILLING_QUEUE_COLLECTION);
 
         const totalPrice = appointments.reduce((sum, appt) => sum + (appt.price || 0), 0);
         const lineItems = appointments.map(appt => ({

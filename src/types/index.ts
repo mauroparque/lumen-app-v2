@@ -50,6 +50,10 @@ export interface Payment {
     concept: string;
 }
 
+export type PatientInput = Omit<Patient, 'id'>;
+export type AppointmentInput = Omit<Appointment, 'id'>;
+export type PaymentInput = Omit<Payment, 'id'>;
+
 export interface ClinicalNote {
     id: string;
     patientId: string;

@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { deleteDoc, doc } from 'firebase/firestore';
-import { db, appId, CLINIC_ID } from '../lib/firebase';
+import { db } from '../lib/firebase';
+import { PATIENTS_COLLECTION } from '../lib/routes';
 import { User } from 'firebase/auth';
 import { Patient } from '../types';
 import { Search } from 'lucide-react';
 import { PatientModal } from '../components/modals/PatientModal';
 import { PatientDetailsDrawer } from '../components/drawers/PatientDetailsDrawer';
 import { PatientCard } from '../components/patients/PatientCard';
+import { LoadingSpinner } from '../components/ui';
 import { usePatients } from '../hooks/usePatients';
 import { toast } from 'sonner';
 
@@ -22,18 +24,18 @@ export const PatientsView = ({ user, profile }: PatientsViewProps) => {
     const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
     const [viewingPatient, setViewingPatient] = useState<Patient | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const { patients } = usePatients(user);
+    const { patients, loading } = usePatients(user);
 
     const filteredPatients = patients.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.email?.toLowerCase().includes(searchTerm.toLowerCase())
+        (p.email && p.email.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     const handleDelete = async (e: React.MouseEvent, patient: Patient) => {
         e.stopPropagation();
         if (confirm(`¿Estás seguro de que deseas eliminar a ${patient.name}?`)) {
             try {
-                await deleteDoc(doc(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'patients', patient.id));
+                await deleteDoc(doc(db, PATIENTS_COLLECTION, patient.id));
                 toast.success(`Paciente ${patient.name} eliminado`);
             } catch (error) {
                 console.error(error);
@@ -67,25 +69,33 @@ export const PatientsView = ({ user, profile }: PatientsViewProps) => {
                 />
             </div>
 
-            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ${filteredPatients.length === 0 ? 'hidden' : ''}`}>
-                {filteredPatients.map((p: Patient) => (
-                    <PatientCard
-                        key={p.id}
-                        patient={p}
-                        onView={() => setViewingPatient(p)}
-                        onEdit={(e) => handleEdit(e, p)}
-                        onDelete={(e) => handleDelete(e, p)}
-                    />
-                ))}
-            </div>
-
-            {filteredPatients.length === 0 && (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center text-slate-500">
-                    <div className="flex justify-center mb-4">
-                        <Search size={48} className="text-slate-200" />
-                    </div>
-                    No se encontraron pacientes que coincidan con tu búsqueda.
+            {loading ? (
+                <div className="py-12">
+                    <LoadingSpinner />
                 </div>
+            ) : (
+                <>
+                    <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ${filteredPatients.length === 0 ? 'hidden' : ''}`}>
+                        {filteredPatients.map((p: Patient) => (
+                            <PatientCard
+                                key={p.id}
+                                patient={p}
+                                onView={() => setViewingPatient(p)}
+                                onEdit={(e) => handleEdit(e, p)}
+                                onDelete={(e) => handleDelete(e, p)}
+                            />
+                        ))}
+                    </div>
+
+                    {filteredPatients.length === 0 && (
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center text-slate-500">
+                            <div className="flex justify-center mb-4">
+                                <Search size={48} className="text-slate-200" />
+                            </div>
+                            No se encontraron pacientes que coincidan con tu búsqueda.
+                        </div>
+                    )}
+                </>
             )}
 
             {(showAdd || editingPatient) && (

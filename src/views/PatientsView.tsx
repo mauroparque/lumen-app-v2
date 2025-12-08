@@ -6,7 +6,7 @@ import { User } from 'firebase/auth';
 import { Patient } from '../types';
 import { Search } from 'lucide-react';
 import { PatientModal } from '../components/modals/PatientModal';
-import { PatientDetailsDrawer } from '../components/drawers/PatientDetailsDrawer';
+import { PatientProfileModal } from '../components/modals/PatientProfileModal';
 import { PatientCard } from '../components/patients/PatientCard';
 import { LoadingSpinner } from '../components/ui';
 import { usePatients } from '../hooks/usePatients';
@@ -111,7 +111,7 @@ export const PatientsView = ({ user, profile }: PatientsViewProps) => {
             )}
 
             {viewingPatient && (
-                <PatientDetailsDrawer
+                <PatientProfileModal
                     patient={viewingPatient}
                     onClose={() => setViewingPatient(null)}
                     user={user}

@@ -1,4 +1,4 @@
-import { Calendar as CalendarIcon, Users, DollarSign, LogOut } from 'lucide-react';
+import { Home, Calendar as CalendarIcon, Users, DollarSign, FileText, LogOut, Receipt } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { User } from 'firebase/auth';
@@ -29,14 +29,19 @@ export const Sidebar = ({ user, currentView, setCurrentView }: SidebarProps) => 
                 <span className="text-lg font-bold text-teal-600">Lumen<br />Salud Mental</span>
             </div>
             <nav className="flex-1 p-4 space-y-1">
+                <SidebarItem icon={Home} label="Inicio" active={currentView === 'home'} onClick={() => setCurrentView('home')} />
                 <SidebarItem icon={CalendarIcon} label="Agenda" active={currentView === 'calendar'} onClick={() => setCurrentView('calendar')} />
                 <SidebarItem icon={Users} label="Pacientes" active={currentView === 'patients'} onClick={() => setCurrentView('patients')} />
 
-                <div className="relative">
-                    <SidebarItem icon={DollarSign} label="Finanzas" active={currentView === 'finance'} onClick={() => setCurrentView('finance')} />
-                    {hasPendingDebts && (
-                        <span className="absolute right-4 top-3 w-2 h-2 bg-red-500 rounded-full"></span>
-                    )}
+                <div className="pt-2 pb-2">
+                    <div className="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Administración</div>
+                    <div className="relative">
+                        <SidebarItem icon={DollarSign} label="Pagos" active={currentView === 'payments'} onClick={() => setCurrentView('payments')} />
+                        {hasPendingDebts && (
+                            <span className="absolute right-4 top-3 w-2 h-2 bg-red-500 rounded-full"></span>
+                        )}
+                    </div>
+                    <SidebarItem icon={FileText} label="Facturación" active={currentView === 'billing'} onClick={() => setCurrentView('billing')} />
                 </div>
             </nav>
             <div className="p-4 border-t text-sm">

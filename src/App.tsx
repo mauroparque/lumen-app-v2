@@ -77,14 +77,26 @@ export default function LumenApp() {
 
                     {/* Content */}
                     <main className="flex-1 overflow-auto pt-16 md:pt-0 relative">
+                        {currentView === 'home' && (
+                            <div className="p-8 text-center text-slate-500">
+                                <h2 className="text-2xl font-bold mb-2">Inicio</h2>
+                                <p>Panel Principal Próximamente...</p>
+                            </div>
+                        )}
                         {currentView === 'calendar' && (
                             <CalendarView user={activeUser} profile={profile} />
                         )}
                         {currentView === 'patients' && (
                             <PatientsView user={activeUser} profile={profile} />
                         )}
-                        {currentView === 'finance' && (
+                        {currentView === 'payments' && (
                             <FinanceView user={activeUser} />
+                        )}
+                        {currentView === 'billing' && (
+                            <div className="p-8 text-center text-slate-500">
+                                <h2 className="text-2xl font-bold mb-2">Facturación</h2>
+                                <p>Módulo de Facturación masiva en desarrollo...</p>
+                            </div>
                         )}
                     </main>
                 </div>

@@ -1,5 +1,6 @@
 import { Patient } from '../../types';
 import { Mail, Phone, Video, MapPin, MessageCircle, FileText, User, Edit2, Trash2 } from 'lucide-react';
+import { formatPhoneNumber } from '../../lib/utils';
 
 interface PatientCardProps {
     patient: Patient;
@@ -91,8 +92,8 @@ export const PatientCard = ({ patient, onView, onEdit, onDelete }: PatientCardPr
 
             <div className="mb-4">
                 <div className={`px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center ${patient.preference === 'online'
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'bg-teal-50 text-teal-700'
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'bg-teal-50 text-teal-700'
                     }`}>
                     {patient.preference === 'online' ? (
                         <Video size={14} className="mr-1" />
@@ -115,9 +116,10 @@ export const PatientCard = ({ patient, onView, onEdit, onDelete }: PatientCardPr
                             <span className="italic text-slate-400">Sin teléfono</span>
                         )}
                     </div>
+
                     {patient.phone && (
                         <a
-                            href={`https://wa.me/${patient.phone.replace(/[^0-9]/g, '')}`}
+                            href={`https://wa.me/${formatPhoneNumber(patient.phone)}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={e => e.stopPropagation()}

@@ -37,9 +37,9 @@ export const PatientProfileModal = ({ patient, onClose, user }: PatientProfileMo
 
     return (
         <ModalOverlay onClose={onClose}>
-            <div className="w-full max-w-3xl flex flex-col h-[85vh] bg-white rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="w-full max-w-5xl flex flex-col md:flex-row h-[90vh] md:h-[80vh] bg-white rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
                 {/* Header */}
-                <div className="bg-slate-50 px-6 py-6 border-b border-slate-200 flex justify-between items-start shrink-0">
+                <div className="w-full md:w-1/3 bg-slate-50 px-6 py-6 border-b md:border-b-0 md:border-r border-slate-200 flex flex-row md:flex-col justify-between items-center md:items-start shrink-0">
                     <div className="flex items-start space-x-4">
                         <div className="h-16 w-16 bg-teal-100 rounded-full flex items-center justify-center text-teal-600 font-bold text-2xl border-2 border-white shadow-sm">
                             {(patient.firstName?.[0] || patient.name[0]).toUpperCase()}
@@ -65,169 +65,172 @@ export const PatientProfileModal = ({ patient, onClose, user }: PatientProfileMo
                     </button>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex border-b border-slate-200 px-6 shrink-0 bg-white sticky top-0 z-10">
-                    <button
-                        onClick={() => setActiveTab('details')}
-                        className={`mr-6 py-4 text-sm font-bold border-b-2 transition-colors flex items-center ${activeTab === 'details' ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                    >
-                        <UserIcon size={16} className="mr-2" /> Datos Personales
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('history')}
-                        className={`mr-6 py-4 text-sm font-bold border-b-2 transition-colors flex items-center ${activeTab === 'history' ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                    >
-                        <Calendar size={16} className="mr-2" /> Historial de Turnos
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('finance')}
-                        className={`py-4 text-sm font-bold border-b-2 transition-colors flex items-center ${activeTab === 'finance' ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                    >
-                        <DollarSign size={16} className="mr-2" /> Cuenta Corriente
-                    </button>
-                </div>
+                {/* Main Content Area */}
+                <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                    {/* Tabs */}
+                    <div className="flex border-b border-slate-200 px-6 shrink-0 bg-white sticky top-0 z-10">
+                        <button
+                            onClick={() => setActiveTab('details')}
+                            className={`mr-6 py-4 text-sm font-bold border-b-2 transition-colors flex items-center ${activeTab === 'details' ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                        >
+                            <UserIcon size={16} className="mr-2" /> Datos Personales
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('history')}
+                            className={`mr-6 py-4 text-sm font-bold border-b-2 transition-colors flex items-center ${activeTab === 'history' ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                        >
+                            <Calendar size={16} className="mr-2" /> Historial de Turnos
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('finance')}
+                            className={`py-4 text-sm font-bold border-b-2 transition-colors flex items-center ${activeTab === 'finance' ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                        >
+                            <DollarSign size={16} className="mr-2" /> Cuenta Corriente
+                        </button>
+                    </div>
 
-                {/* Content */}
-                <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
-                    {loading ? (
-                        <div className="flex justify-center items-center h-full">
-                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600"></div>
-                        </div>
-                    ) : (
-                        <>
-                            {activeTab === 'details' && (
-                                <div className="space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Nombre</label>
-                                            <div className="text-slate-900 border-b border-slate-100 pb-2">{patient.firstName || patient.name.split(' ')[0]}</div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Apellido</label>
-                                            <div className="text-slate-900 border-b border-slate-100 pb-2">{patient.lastName || patient.name.split(' ').slice(1).join(' ')}</div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">DNI</label>
-                                            <div className="text-slate-900 border-b border-slate-100 pb-2">{patient.dni || '-'}</div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Telefono</label>
-                                            <div className="text-slate-900 border-b border-slate-100 pb-2">{patient.phone || '-'}</div>
-                                        </div>
-                                        <div className="col-span-1 md:col-span-2">
-                                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Email</label>
-                                            <div className="text-slate-900 border-b border-slate-100 pb-2">{patient.email}</div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Honorarios</label>
-                                            <div className="text-slate-900 border-b border-slate-100 pb-2 font-mono">${patient.fee || '-'}</div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Modalidad</label>
-                                            <div className="text-slate-900 border-b border-slate-100 pb-2 capitalize">{patient.preference || '-'}</div>
-                                        </div>
-                                        <div className="col-span-1 md:col-span-2">
-                                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Profesional Asignado</label>
-                                            <div className="text-slate-900 border-b border-slate-100 pb-2">{patient.professional || 'No asignado'}</div>
-                                        </div>
-                                    </div>
-
-                                    {stats.lastVisit && (
-                                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-center text-blue-700 text-sm font-medium">
-                                            <Clock size={18} className="mr-2" />
-                                            Última visita registrada: {stats.lastVisit.toLocaleDateString()}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {activeTab === 'history' && (
-                                <div className="space-y-4">
-                                    {history.length === 0 ? (
-                                        <div className="text-center text-slate-500 py-12 bg-white rounded-xl border border-slate-100">
-                                            <Calendar size={48} className="mx-auto mb-4 text-slate-300" />
-                                            <p>No hay turnos registrados en el historial.</p>
-                                        </div>
-                                    ) : (
-                                        history.map(appt => (
-                                            <div key={appt.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center hover:bg-slate-50 transition-colors">
-                                                <div>
-                                                    <div className="font-bold text-slate-800">
-                                                        {new Date(appt.date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })}
-                                                    </div>
-                                                    <div className="text-sm text-slate-500 flex items-center mt-1">
-                                                        <Clock size={14} className="mr-1" /> {appt.time} hs - {appt.type}
-                                                    </div>
-                                                </div>
-                                                <div className="flex flex-col items-end space-y-2">
-                                                    <div className="font-bold text-slate-700">${appt.price}</div>
-                                                    {appt.isPaid ? (
-                                                        <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] uppercase font-bold rounded-full flex items-center">
-                                                            <CheckCircle size={10} className="mr-1" /> Pagado
-                                                        </span>
-                                                    ) : (
-                                                        <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] uppercase font-bold rounded-full flex items-center">
-                                                            <AlertCircle size={10} className="mr-1" /> Impago
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            )}
-
-                            {activeTab === 'finance' && (
-                                <div className="space-y-6">
-                                    {/* Balance Summary */}
-                                    <div className={`p-6 rounded-xl border ${stats.totalDebt > 0 ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
-                                        <div className="flex justify-between items-center">
+                    {/* Content */}
+                    <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
+                        {loading ? (
+                            <div className="flex justify-center items-center h-full">
+                                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600"></div>
+                            </div>
+                        ) : (
+                            <>
+                                {activeTab === 'details' && (
+                                    <div className="space-y-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
                                             <div>
-                                                <div className="text-sm font-bold text-slate-500 uppercase tracking-wide opacity-80">Saldo Pendiente</div>
-                                                <div className={`text-4xl font-bold mt-1 ${stats.totalDebt > 0 ? 'text-red-700' : 'text-green-700'}`}>
-                                                    ${stats.totalDebt}
+                                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Nombre</label>
+                                                <div className="text-slate-900 border-b border-slate-100 pb-2">{patient.firstName || patient.name.split(' ')[0]}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Apellido</label>
+                                                <div className="text-slate-900 border-b border-slate-100 pb-2">{patient.lastName || patient.name.split(' ').slice(1).join(' ')}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">DNI</label>
+                                                <div className="text-slate-900 border-b border-slate-100 pb-2">{patient.dni || '-'}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Telefono</label>
+                                                <div className="text-slate-900 border-b border-slate-100 pb-2">{patient.phone || '-'}</div>
+                                            </div>
+                                            <div className="col-span-1 md:col-span-2">
+                                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Email</label>
+                                                <div className="text-slate-900 border-b border-slate-100 pb-2">{patient.email}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Honorarios</label>
+                                                <div className="text-slate-900 border-b border-slate-100 pb-2 font-mono">${patient.fee || '-'}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Modalidad</label>
+                                                <div className="text-slate-900 border-b border-slate-100 pb-2 capitalize">{patient.preference || '-'}</div>
+                                            </div>
+                                            <div className="col-span-1 md:col-span-2">
+                                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Profesional Asignado</label>
+                                                <div className="text-slate-900 border-b border-slate-100 pb-2">{patient.professional || 'No asignado'}</div>
+                                            </div>
+                                        </div>
+
+                                        {stats.lastVisit && (
+                                            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-center text-blue-700 text-sm font-medium">
+                                                <Clock size={18} className="mr-2" />
+                                                Última visita registrada: {stats.lastVisit.toLocaleDateString()}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {activeTab === 'history' && (
+                                    <div className="space-y-4">
+                                        {history.length === 0 ? (
+                                            <div className="text-center text-slate-500 py-12 bg-white rounded-xl border border-slate-100">
+                                                <Calendar size={48} className="mx-auto mb-4 text-slate-300" />
+                                                <p>No hay turnos registrados en el historial.</p>
+                                            </div>
+                                        ) : (
+                                            history.map(appt => (
+                                                <div key={appt.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center hover:bg-slate-50 transition-colors">
+                                                    <div>
+                                                        <div className="font-bold text-slate-800">
+                                                            {new Date(appt.date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })}
+                                                        </div>
+                                                        <div className="text-sm text-slate-500 flex items-center mt-1">
+                                                            <Clock size={14} className="mr-1" /> {appt.time} hs - {appt.type}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-col items-end space-y-2">
+                                                        <div className="font-bold text-slate-700">${appt.price}</div>
+                                                        {appt.isPaid ? (
+                                                            <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] uppercase font-bold rounded-full flex items-center">
+                                                                <CheckCircle size={10} className="mr-1" /> Pagado
+                                                            </span>
+                                                        ) : (
+                                                            <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] uppercase font-bold rounded-full flex items-center">
+                                                                <AlertCircle size={10} className="mr-1" /> Impago
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+
+                                {activeTab === 'finance' && (
+                                    <div className="space-y-6">
+                                        {/* Balance Summary */}
+                                        <div className={`p-6 rounded-xl border ${stats.totalDebt > 0 ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
+                                            <div className="flex justify-between items-center">
+                                                <div>
+                                                    <div className="text-sm font-bold text-slate-500 uppercase tracking-wide opacity-80">Saldo Pendiente</div>
+                                                    <div className={`text-4xl font-bold mt-1 ${stats.totalDebt > 0 ? 'text-red-700' : 'text-green-700'}`}>
+                                                        ${stats.totalDebt}
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wide opacity-80">Total Pagado Histórico</div>
+                                                    <div className="text-xl font-bold text-slate-700 mt-1">${stats.totalPaid}</div>
                                                 </div>
                                             </div>
-                                            <div className="text-right">
-                                                <div className="text-xs font-bold text-slate-500 uppercase tracking-wide opacity-80">Total Pagado Histórico</div>
-                                                <div className="text-xl font-bold text-slate-700 mt-1">${stats.totalPaid}</div>
+                                        </div>
+
+                                        <div>
+                                            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">Movimientos (Cta. Cte.)</h3>
+                                            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                                                {movements.length === 0 ? (
+                                                    <div className="text-center text-slate-500 py-8 italic">No hay movimientos registrados.</div>
+                                                ) : (
+                                                    <table className="w-full text-sm text-left">
+                                                        <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-200">
+                                                            <tr>
+                                                                <th className="px-4 py-3">Fecha</th>
+                                                                <th className="px-4 py-3">Descripción</th>
+                                                                <th className="px-4 py-3 text-right">Monto</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-slate-100">
+                                                            {movements.map((mov, idx) => (
+                                                                <tr key={`${mov.id}-${idx}`} className="hover:bg-slate-50">
+                                                                    <td className="px-4 py-3 text-slate-500">{mov.date.toLocaleDateString()}</td>
+                                                                    <td className="px-4 py-3 font-medium text-slate-800">{mov.description}</td>
+                                                                    <td className={`px-4 py-3 text-right font-bold ${mov.type === 'payment' ? 'text-green-600' : 'text-slate-700'}`}>
+                                                                        {mov.type === 'payment' ? '+' : '-'}${mov.amount}
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
-
-                                    <div>
-                                        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">Movimientos (Cta. Cte.)</h3>
-                                        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                                            {movements.length === 0 ? (
-                                                <div className="text-center text-slate-500 py-8 italic">No hay movimientos registrados.</div>
-                                            ) : (
-                                                <table className="w-full text-sm text-left">
-                                                    <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-200">
-                                                        <tr>
-                                                            <th className="px-4 py-3">Fecha</th>
-                                                            <th className="px-4 py-3">Descripción</th>
-                                                            <th className="px-4 py-3 text-right">Monto</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-slate-100">
-                                                        {movements.map((mov, idx) => (
-                                                            <tr key={`${mov.id}-${idx}`} className="hover:bg-slate-50">
-                                                                <td className="px-4 py-3 text-slate-500">{mov.date.toLocaleDateString()}</td>
-                                                                <td className="px-4 py-3 font-medium text-slate-800">{mov.description}</td>
-                                                                <td className={`px-4 py-3 text-right font-bold ${mov.type === 'payment' ? 'text-green-600' : 'text-slate-700'}`}>
-                                                                    {mov.type === 'payment' ? '+' : '-'}${mov.amount}
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </>
-                    )}
+                                )}
+                            </>
+                        )}
+                    </div>
                 </div>
             </div>
         </ModalOverlay>

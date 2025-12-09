@@ -11,7 +11,7 @@ interface PaymentsViewProps {
 export const PaymentsView = ({ user }: PaymentsViewProps) => {
     const { appointments, loading } = useData();
     const [searchTerm, setSearchTerm] = useState('');
-    const [viewMode, setViewMode] = useState<'overdue' | 'upcoming' | 'history'>('upcoming');
+    const [viewMode, setViewMode] = useState<'overdue' | 'upcoming' | 'history'>('overdue');
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
     const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
@@ -246,7 +246,6 @@ export const PaymentsView = ({ user }: PaymentsViewProps) => {
                 <PaymentModal
                     appointment={selectedAppointment}
                     onClose={() => setPaymentModalOpen(false)}
-                    onPaymentComplete={() => setPaymentModalOpen(false)}
                     user={user}
                 />
             )}

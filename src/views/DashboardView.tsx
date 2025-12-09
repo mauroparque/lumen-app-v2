@@ -6,8 +6,9 @@ import { usePatients } from '../hooks/usePatients';
 import { usePendingTasks } from '../hooks/usePendingTasks';
 import {
     Calendar, Users, DollarSign, Clock, AlertCircle,
-    TrendingUp, ChevronRight, CheckCircle, Video, MapPin, ListTodo
+    TrendingUp, ChevronRight, CheckCircle, Video, MapPin, ListTodo, Square, CheckSquare
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface DashboardViewProps {
     user: User;
@@ -18,7 +19,7 @@ interface DashboardViewProps {
 export const DashboardView = ({ user, profile, onNavigate }: DashboardViewProps) => {
     const { appointments, loading } = useData();
     const { patients } = usePatients(user);
-    const { pendingTasks } = usePendingTasks(appointments);
+    const { pendingTasks, completeTask } = usePendingTasks(appointments);
 
     // Fecha de hoy en formato YYYY-MM-DD
     const today = useMemo(() => {
@@ -228,15 +229,31 @@ export const DashboardView = ({ user, profile, onNavigate }: DashboardViewProps)
                                 {pendingTasks.slice(0, 5).map((task) => {
                                     const patient = patients.find(p => p.id === task.patientId);
                                     return (
-                                        <div key={`${task.noteId}-${task.taskIndex}`} className="p-3 hover:bg-slate-50 transition-colors">
-                                            <div className="text-sm text-slate-700 font-medium">{task.text}</div>
-                                            <div className="flex items-center justify-between text-xs text-slate-400 mt-1">
-                                                <span>{patient?.name || 'Paciente'}</span>
-                                                {task.appointmentDate && (
-                                                    <span className="text-slate-500">
-                                                        {new Date(task.appointmentDate + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-                                                    </span>
-                                                )}
+                                        <div key={`${task.noteId}-${task.taskIndex}`} className="p-3 hover:bg-slate-50 transition-colors flex items-start gap-2">
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        await completeTask(task.noteId, task.taskIndex);
+                                                        toast.success('Tarea completada');
+                                                    } catch {
+                                                        toast.error('Error al completar tarea');
+                                                    }
+                                                }}
+                                                className="mt-0.5 text-amber-400 hover:text-green-600 transition-colors flex-shrink-0"
+                                                title="Marcar como completada"
+                                            >
+                                                <Square size={16} />
+                                            </button>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-sm text-slate-700 font-medium">{task.text}</div>
+                                                <div className="flex items-center justify-between text-xs text-slate-400 mt-1">
+                                                    <span>{patient?.name || 'Paciente'}</span>
+                                                    {task.appointmentDate && (
+                                                        <span className="text-slate-500">
+                                                            {new Date(task.appointmentDate + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     );

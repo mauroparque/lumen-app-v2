@@ -18,6 +18,7 @@ import { CalendarView } from './views/CalendarView';
 import { PatientsView } from './views/PatientsView';
 import { PaymentsView } from './views/PaymentsView';
 import { BillingView } from './views/BillingView';
+import { DashboardView } from './views/DashboardView';
 
 // Global declaration for initial auth token
 declare global {
@@ -79,10 +80,7 @@ export default function LumenApp() {
                     {/* Content */}
                     <main className="flex-1 overflow-auto pt-16 md:pt-0 relative">
                         {currentView === 'home' && (
-                            <div className="p-8 text-center text-slate-500">
-                                <h2 className="text-2xl font-bold mb-2">Inicio</h2>
-                                <p>Panel Principal Próximamente...</p>
-                            </div>
+                            <DashboardView user={activeUser} profile={profile} onNavigate={(view) => setCurrentView(view as View)} />
                         )}
                         {currentView === 'calendar' && (
                             <CalendarView user={activeUser} profile={profile} />

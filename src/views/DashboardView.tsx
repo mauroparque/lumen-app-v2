@@ -3,9 +3,10 @@ import { User } from 'firebase/auth';
 import { StaffProfile } from '../types';
 import { useData } from '../context/DataContext';
 import { usePatients } from '../hooks/usePatients';
+import { usePendingTasks } from '../hooks/usePendingTasks';
 import {
     Calendar, Users, DollarSign, Clock, AlertCircle,
-    TrendingUp, ChevronRight, CheckCircle, Video, MapPin
+    TrendingUp, ChevronRight, CheckCircle, Video, MapPin, ListTodo
 } from 'lucide-react';
 
 interface DashboardViewProps {
@@ -17,6 +18,7 @@ interface DashboardViewProps {
 export const DashboardView = ({ user, profile, onNavigate }: DashboardViewProps) => {
     const { appointments, loading } = useData();
     const { patients } = usePatients(user);
+    const { pendingTasks } = usePendingTasks(appointments);
 
     // Fecha de hoy en formato YYYY-MM-DD
     const today = useMemo(() => {
@@ -268,6 +270,39 @@ export const DashboardView = ({ user, profile, onNavigate }: DashboardViewProps)
                             )}
                         </div>
                     </div>
+
+                    {/* Tareas Pendientes */}
+                    {pendingTasks.length > 0 && (
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-amber-50/50">
+                                <div className="flex items-center">
+                                    <ListTodo size={18} className="text-amber-600 mr-2" />
+                                    <span className="font-bold text-slate-900 text-sm">Tareas Pendientes</span>
+                                </div>
+                                <span className="text-xs text-amber-600 font-medium bg-amber-100 px-2 py-0.5 rounded-full">
+                                    {pendingTasks.length}
+                                </span>
+                            </div>
+                            <div className="divide-y divide-slate-50">
+                                {pendingTasks.slice(0, 5).map((task) => {
+                                    const patient = patients.find(p => p.id === task.patientId);
+                                    return (
+                                        <div key={`${task.noteId}-${task.taskIndex}`} className="p-3 hover:bg-slate-50 transition-colors">
+                                            <div className="text-sm text-slate-700 font-medium">{task.text}</div>
+                                            <div className="flex items-center justify-between text-xs text-slate-400 mt-1">
+                                                <span>{patient?.name || 'Paciente'}</span>
+                                                {task.appointmentDate && (
+                                                    <span className="text-slate-500">
+                                                        {new Date(task.appointmentDate + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -303,3 +338,4 @@ const StatCard = ({ icon: Icon, label, value, color, onClick }: {
         </button>
     );
 };
+

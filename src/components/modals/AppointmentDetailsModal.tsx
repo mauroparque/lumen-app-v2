@@ -57,6 +57,44 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
         }
     };
 
+    const handleDeleteThisAndFollowing = async () => {
+        if (!appointment.recurrenceId) return;
+
+        setIsDeleting(true);
+        try {
+            const appointmentsRef = collection(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'appointments');
+            const q = query(appointmentsRef, where('recurrenceId', '==', appointment.recurrenceId));
+            const snapshot = await getDocs(q);
+
+            // Filtrar solo los que son >= a la fecha del turno actual
+            const currentDate = appointment.date;
+            const toDelete = snapshot.docs.filter(docSnap => {
+                const data = docSnap.data();
+                return data.date >= currentDate;
+            });
+
+            if (toDelete.length === 0) {
+                toast.info('No hay turnos para eliminar');
+                return;
+            }
+
+            const batch = writeBatch(db);
+            toDelete.forEach(docSnap => {
+                batch.delete(docSnap.ref);
+            });
+
+            await batch.commit();
+            toast.success(`${toDelete.length} turno(s) eliminado(s)`);
+            onClose();
+        } catch (error) {
+            console.error(error);
+            toast.error('Error al eliminar los turnos');
+        } finally {
+            setIsDeleting(false);
+            setShowDeleteDialog(false);
+        }
+    };
+
     const handleDeleteSeries = async () => {
         if (!appointment.recurrenceId) return;
 
@@ -398,12 +436,21 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
                             </button>
 
                             <button
+                                onClick={handleDeleteThisAndFollowing}
+                                disabled={isDeleting}
+                                className="w-full py-3 px-4 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg font-medium transition-colors disabled:opacity-50 text-left border border-amber-200"
+                            >
+                                <div className="font-semibold">Este y los siguientes</div>
+                                <div className="text-xs text-amber-600">Se eliminarán este turno y todos los futuros de la serie</div>
+                            </button>
+
+                            <button
                                 onClick={handleDeleteSeries}
                                 disabled={isDeleting}
                                 className="w-full py-3 px-4 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg font-medium transition-colors disabled:opacity-50 text-left border border-red-200"
                             >
                                 <div className="font-semibold">Toda la serie</div>
-                                <div className="text-xs text-red-500">Se eliminarán todos los turnos vinculados</div>
+                                <div className="text-xs text-red-500">Se eliminarán todos los turnos (pasados y futuros)</div>
                             </button>
                         </div>
 

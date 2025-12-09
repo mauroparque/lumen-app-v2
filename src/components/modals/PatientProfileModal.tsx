@@ -186,8 +186,8 @@ export const PatientProfileModal = ({ patient, onClose, user }: PatientProfileMo
                                             history.map(appt => (
                                                 <div key={appt.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex items-start">
                                                     <div className="h-12 w-12 rounded-lg bg-teal-50 text-teal-700 flex flex-col items-center justify-center mr-4 shrink-0 font-bold border border-teal-100">
-                                                        <span className="text-xs uppercase">{new Date(appt.date).toLocaleDateString('es-ES', { month: 'short' })}</span>
-                                                        <span className="text-xl leading-none">{new Date(appt.date).getDate()}</span>
+                                                        <span className="text-xs uppercase">{new Date(appt.date + 'T00:00:00').toLocaleDateString('es-ES', { month: 'short' })}</span>
+                                                        <span className="text-xl leading-none">{new Date(appt.date + 'T00:00:00').getDate()}</span>
                                                     </div>
                                                     <div className="flex-1">
                                                         <div className="flex justify-between items-start">

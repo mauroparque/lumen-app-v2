@@ -350,141 +350,149 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
                                 </div>
                             ) : (
-                                <div className="flex flex-col h-full space-y-4">
-                                    {/* Evolución / Notas - Área principal */}
-                                    <div className="flex-1 min-h-0">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <label className="text-sm font-bold text-slate-800 flex items-center">
-                                                <FileText size={16} className="mr-2 text-teal-600" />
-                                                Evolución de la Sesión
-                                            </label>
-                                            <span className="text-xs text-slate-400">
-                                                {content.length} caracteres
-                                            </span>
-                                        </div>
-                                        <textarea
-                                            className="w-full h-64 p-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none text-slate-700 bg-white shadow-sm text-sm leading-relaxed"
-                                            placeholder="Documenta aquí la evolución del paciente, observaciones clínicas, intervenciones realizadas, estado emocional, temas trabajados..."
-                                            value={content}
-                                            onChange={(e) => setContent(e.target.value)}
-                                        />
-                                    </div>
-
-                                    {/* Tareas Pendientes */}
-                                    <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-4">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <label className="text-sm font-bold text-slate-800 flex items-center">
-                                                <ListTodo size={16} className="mr-2 text-amber-600" />
-                                                Tareas Pendientes
-                                            </label>
-                                            <span className="text-xs text-amber-600 font-medium">
-                                                {tasks.filter(t => !t.completed).length} pendiente(s)
-                                            </span>
-                                        </div>
-
-                                        {/* Lista de tareas */}
-                                        <div className="space-y-2 mb-3">
-                                            {tasks.map((task, index) => (
-                                                <div
-                                                    key={index}
-                                                    className={`flex items-center p-2 rounded-lg transition-colors ${task.completed ? 'bg-green-50 border border-green-100' : 'bg-white border border-amber-100'}`}
-                                                >
-                                                    <button
-                                                        onClick={() => {
-                                                            const newTasks = [...tasks];
-                                                            newTasks[index].completed = !newTasks[index].completed;
-                                                            setTasks(newTasks);
-                                                        }}
-                                                        className={`mr-3 flex-shrink-0 ${task.completed ? 'text-green-600' : 'text-amber-400 hover:text-amber-600'}`}
-                                                    >
-                                                        {task.completed ? <CheckSquare size={20} /> : <Square size={20} />}
-                                                    </button>
-                                                    <span className={`flex-1 text-sm ${task.completed ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
-                                                        {task.text}
-                                                    </span>
-                                                    <button
-                                                        onClick={() => setTasks(tasks.filter((_, i) => i !== index))}
-                                                        className="text-slate-300 hover:text-red-500 ml-2"
-                                                    >
-                                                        <X size={16} />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Agregar tarea */}
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="text"
-                                                className="flex-1 px-3 py-2 text-sm border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-400 focus:border-transparent bg-white"
-                                                placeholder="Agregar nueva tarea..."
-                                                value={newTask}
-                                                onChange={(e) => setNewTask(e.target.value)}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter' && newTask.trim()) {
-                                                        setTasks([...tasks, { text: newTask.trim(), completed: false }]);
-                                                        setNewTask('');
-                                                    }
-                                                }}
-                                            />
-                                            <button
-                                                onClick={() => {
-                                                    if (newTask.trim()) {
-                                                        setTasks([...tasks, { text: newTask.trim(), completed: false }]);
-                                                        setNewTask('');
-                                                    }
-                                                }}
-                                                className="px-3 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
-                                            >
-                                                <Plus size={18} />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Archivos Adjuntos - Compacto */}
-                                    <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/50">
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex items-center">
-                                                <Paperclip size={16} className="mr-2 text-slate-400" />
-                                                <span className="text-sm font-medium text-slate-700">
-                                                    Adjuntos ({attachments.length})
+                                <div className="space-y-5">
+                                    {/* Layout horizontal de 2 columnas */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {/* Evolución / Notas - Área principal */}
+                                        <div className="flex-1 min-h-0">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <label className="text-sm font-bold text-slate-800 flex items-center">
+                                                    <FileText size={16} className="mr-2 text-teal-600" />
+                                                    Evolución de la Sesión
+                                                </label>
+                                                <span className="text-xs text-slate-400">
+                                                    {content.length} caracteres
                                                 </span>
                                             </div>
-                                            <button
-                                                onClick={() => fileInputRef.current?.click()}
-                                                className="text-xs text-teal-600 hover:text-teal-700 font-medium flex items-center px-2 py-1 hover:bg-teal-50 rounded"
-                                            >
-                                                <Plus size={14} className="mr-1" /> Adjuntar
-                                            </button>
-                                            <input
-                                                type="file"
-                                                ref={fileInputRef}
-                                                className="hidden"
-                                                onChange={handleFileUpload}
+                                            <textarea
+                                                className="w-full h-64 p-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none text-slate-700 bg-white shadow-sm text-sm leading-relaxed"
+                                                placeholder="Documenta aquí la evolución del paciente, observaciones clínicas, intervenciones realizadas, estado emocional, temas trabajados..."
+                                                value={content}
+                                                onChange={(e) => setContent(e.target.value)}
                                             />
                                         </div>
 
-                                        {attachments.length > 0 && (
-                                            <div className="mt-2 flex flex-wrap gap-2">
-                                                {attachments.map((url, index) => (
-                                                    <div key={index} className="flex items-center bg-white px-2 py-1 rounded border border-slate-200 text-xs">
-                                                        <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline mr-2">
-                                                            Archivo {index + 1}
-                                                        </a>
-                                                        <button
-                                                            onClick={() => setAttachments(prev => prev.filter((_, i) => i !== index))}
-                                                            className="text-slate-300 hover:text-red-500"
-                                                        >
-                                                            <X size={12} />
-                                                        </button>
-                                                    </div>
-                                                ))}
+                                        {/* Columna derecha: Tareas + Adjuntos */}
+                                        <div className="space-y-4">
+                                            {/* Tareas Pendientes */}
+                                            <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-4">
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <label className="text-sm font-bold text-slate-800 flex items-center">
+                                                        <ListTodo size={16} className="mr-2 text-amber-600" />
+                                                        Tareas Pendientes
+                                                    </label>
+                                                    <span className="text-xs text-amber-600 font-medium">
+                                                        {tasks.filter(t => !t.completed).length} pendiente(s)
+                                                    </span>
+                                                </div>
+
+                                                <div className="space-y-2 mb-3 max-h-32 overflow-y-auto">
+                                                    {tasks.length === 0 ? (
+                                                        <div className="text-sm text-amber-500/60 italic text-center py-2">Sin tareas</div>
+                                                    ) : (
+                                                        tasks.map((task, index) => (
+                                                            <div
+                                                                key={index}
+                                                                className={`flex items-center p-2 rounded-lg transition-colors ${task.completed ? 'bg-green-50 border border-green-100' : 'bg-white border border-amber-100'}`}
+                                                            >
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const newTasks = [...tasks];
+                                                                        newTasks[index].completed = !newTasks[index].completed;
+                                                                        setTasks(newTasks);
+                                                                    }}
+                                                                    className={`mr-2 flex-shrink-0 ${task.completed ? 'text-green-600' : 'text-amber-400 hover:text-amber-600'}`}
+                                                                >
+                                                                    {task.completed ? <CheckSquare size={18} /> : <Square size={18} />}
+                                                                </button>
+                                                                <span className={`flex-1 text-sm ${task.completed ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                                                                    {task.text}
+                                                                </span>
+                                                                <button
+                                                                    onClick={() => setTasks(tasks.filter((_, i) => i !== index))}
+                                                                    className="text-slate-300 hover:text-red-500 ml-1"
+                                                                >
+                                                                    <X size={14} />
+                                                                </button>
+                                                            </div>
+                                                        ))
+                                                    )}
+                                                </div>
+
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        className="flex-1 px-3 py-2 text-sm border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-400 focus:border-transparent bg-white"
+                                                        placeholder="Nueva tarea..."
+                                                        value={newTask}
+                                                        onChange={(e) => setNewTask(e.target.value)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' && newTask.trim()) {
+                                                                setTasks([...tasks, { text: newTask.trim(), completed: false }]);
+                                                                setNewTask('');
+                                                            }
+                                                        }}
+                                                    />
+                                                    <button
+                                                        onClick={() => {
+                                                            if (newTask.trim()) {
+                                                                setTasks([...tasks, { text: newTask.trim(), completed: false }]);
+                                                                setNewTask('');
+                                                            }
+                                                        }}
+                                                        className="px-3 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+                                                    >
+                                                        <Plus size={16} />
+                                                    </button>
+                                                </div>
                                             </div>
-                                        )}
+
+                                            {/* Archivos Adjuntos */}
+                                            <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50">
+                                                <div className="flex justify-between items-center mb-3">
+                                                    <label className="text-sm font-bold text-slate-800 flex items-center">
+                                                        <Paperclip size={16} className="mr-2 text-slate-500" />
+                                                        Adjuntos ({attachments.length})
+                                                    </label>
+                                                    <button
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                        className="text-xs text-teal-600 hover:text-teal-700 font-medium flex items-center px-2 py-1 hover:bg-teal-50 rounded"
+                                                    >
+                                                        <Plus size={14} className="mr-1" /> Adjuntar
+                                                    </button>
+                                                    <input
+                                                        type="file"
+                                                        ref={fileInputRef}
+                                                        className="hidden"
+                                                        onChange={handleFileUpload}
+                                                    />
+                                                </div>
+
+                                                {attachments.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {attachments.map((url, index) => (
+                                                            <div key={index} className="flex items-center bg-white px-2 py-1 rounded border border-slate-200 text-xs">
+                                                                <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline mr-2">
+                                                                    Archivo {index + 1}
+                                                                </a>
+                                                                <button
+                                                                    onClick={() => setAttachments(prev => prev.filter((_, i) => i !== index))}
+                                                                    className="text-slate-300 hover:text-red-500"
+                                                                >
+                                                                    <X size={12} />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-sm text-slate-400 italic text-center py-2">Sin adjuntos</div>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
 
                                     {/* Botón Guardar */}
-                                    <div className="pt-2 flex justify-end">
+                                    <div className="flex justify-end border-t border-slate-100 pt-4">
                                         <button
                                             onClick={handleSaveNote}
                                             disabled={saving}

@@ -231,7 +231,7 @@ export const DashboardView = ({ user, profile, onNavigate }: DashboardViewProps)
                                         <div>
                                             <div className="font-medium text-slate-900 text-sm">{debt.patientName}</div>
                                             <div className="text-xs text-slate-400">
-                                                {new Date(debt.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                                                {new Date(debt.date + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
                                             </div>
                                         </div>
                                         <div className="font-bold text-red-600 text-sm">${debt.price}</div>
@@ -257,7 +257,7 @@ export const DashboardView = ({ user, profile, onNavigate }: DashboardViewProps)
                                         <div>
                                             <div className="font-medium text-slate-900 text-sm">{appt.patientName}</div>
                                             <div className="text-xs text-slate-400">
-                                                {new Date(appt.date).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })} - {appt.time}
+                                                {new Date(appt.date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })} - {appt.time}
                                             </div>
                                         </div>
                                         <div className={`text-xs font-medium px-2 py-1 rounded ${appt.type === 'online' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>

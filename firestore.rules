@@ -1,53 +1,28 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Función Helper: Verifica si el usuario está autenticado
-    function isAuthenticated() {
-      return request.auth != null;
+    function isAuthenticated() { return request.auth != null; }
+    function isNotInvoiced() { 
+       return resource.data.get('billingStatus', 'pending') != 'invoiced'; 
     }
-    // Función Helper: Verifica que no se esté modificando un turno ya facturado
-    function isNotInvoiced() {
-      // Si el documento ya existe y tiene estado 'invoiced', bloquear cambios
-      return !resource.data.keys().has('billingStatus') || resource.data.billingStatus != 'invoiced';
-    }
-    // Ruta base de la clínica
     match /artifacts/{appId}/clinics/{clinicId} {
+      match /patients/{patientId} { allow read, write: if isAuthenticated(); }
       
-      // 1. Pacientes: Acceso total para staff autenticado
-      match /patients/{patientId} {
-        allow read, write: if isAuthenticated();
-      }
-      // 2. Turnos: Bloqueo de edición si ya está facturado
+      // REGLA CRÍTICA CORREGIDA:
       match /appointments/{appointmentId} {
         allow read, create: if isAuthenticated();
-        allow update, delete: if isAuthenticated() && isNotInvoiced();
-      }
-      // 3. Pagos: Append-only (Solo agregar, no borrar/editar para auditoría)
-      match /payments/{paymentId} {
-        allow read, create: if isAuthenticated();
-        allow update, delete: if false; // Solo Admin/Backend puede corregir pagos
-      }
-      // 4. Cola de Facturación: El usuario solo puede PEDIR (crear), no cerrar (update)
-      match /integrations/billing/queue/{requestId} {
-        allow read: if isAuthenticated();
-        // Solo permitir crear con estado 'pending'
-        allow create: if isAuthenticated() 
-                      && request.resource.data.status == 'pending';
-        // Nadie edita esto desde el cliente (solo n8n/Functions via Admin SDK)
-        allow update, delete: if false; 
+        allow delete: if isAuthenticated() && isNotInvoiced(); // Solo borrar si NO está facturado
+        allow update: if isAuthenticated() && (
+          isNotInvoiced() || // Si no está facturado, edita lo que quieras
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPaid']) // Si ESTÁ facturado, solo deja cambiar isPaid
+        );
       }
       
-      // 5. Staff y Notas: Acceso estándar
-      match /staff/{userId} {
-        allow read, write: if isAuthenticated();
-      }
-      match /notes/{noteId} {
-        allow read, write: if isAuthenticated();
-      }
+      match /payments/{paymentId} { allow read, create: if isAuthenticated(); allow update, delete: if false; }
+      match /integrations/billing/queue/{requestId} { allow read: if isAuthenticated(); allow create: if isAuthenticated(); allow update, delete: if false; }
+      match /staff/{userId} { allow read, write: if isAuthenticated(); }
+      match /notes/{noteId} { allow read, write: if isAuthenticated(); }
     }
-    // Regla por defecto para bloquear cualquier otra cosa fuera de la estructura
-    match /{document=**} {
-      allow read, write: if false;
-    }
+    match /{document=**} { allow read, write: if false; }
   }
 }

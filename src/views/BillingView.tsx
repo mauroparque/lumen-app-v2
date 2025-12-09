@@ -128,7 +128,7 @@ export const BillingView = () => {
             const patientData = {
                 id: patientId,
                 name: summary.patientName,
-                email: summary.patientEmail,
+                email: summary.patientEmail || "",
                 dni: ''
             };
 

@@ -49,7 +49,7 @@ export const PaymentModal = ({ appointment, onClose, user }: PaymentModalProps) 
 
     return (
         <ModalOverlay onClose={onClose}>
-            <div className="p-6">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
                 <h2 className="text-xl font-bold mb-2 text-slate-800">Regularizar Sesión</h2>
                 <p className="text-sm text-slate-500 mb-6">Esto registrará un cobro y marcará el turno como pagado.</p>
 

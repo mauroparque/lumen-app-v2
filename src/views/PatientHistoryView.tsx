@@ -1,11 +1,14 @@
 import { useState, useMemo } from 'react';
 import { User } from 'firebase/auth';
-import { ArrowLeft, FileText, ListTodo, Calendar, Phone, Mail, MessageCircle, Baby } from 'lucide-react';
+import { ArrowLeft, FileText, ListTodo, Calendar, Phone, Mail, MessageCircle, Baby, Plus, Square, CheckSquare, Trash2 } from 'lucide-react';
 import { View } from '../types';
 import { usePatients } from '../hooks/usePatients';
 import { useData } from '../context/DataContext';
+import { usePendingTasks } from '../hooks/usePendingTasks';
 import { StaffProfile } from '../types';
 import { formatPhoneNumber } from '../lib/utils';
+import { AddTaskModal } from '../components/modals/AddTaskModal';
+import { toast } from 'sonner';
 
 interface PatientHistoryViewProps {
     user: User;
@@ -31,10 +34,12 @@ const formatDate = (dateStr: string): string => {
     return date.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 };
 
-export const PatientHistoryView = ({ user, patientId, setCurrentView }: PatientHistoryViewProps) => {
+export const PatientHistoryView = ({ user, profile, patientId, setCurrentView }: PatientHistoryViewProps) => {
     const [activeTab, setActiveTab] = useState<'history' | 'tasks'>('history');
+    const [showAddTask, setShowAddTask] = useState(false);
     const { patients } = usePatients(user);
     const { appointments } = useData();
+    const { pendingTasks, completeTask } = usePendingTasks(appointments);
 
     const patient = useMemo(() =>
         patients.find(p => p.id === patientId),
@@ -53,6 +58,12 @@ export const PatientHistoryView = ({ user, patientId, setCurrentView }: PatientH
     const completedAppointments = useMemo(() =>
         patientAppointments.filter(a => a.status === 'completado' || new Date(a.date) < new Date()),
         [patientAppointments]
+    );
+
+    // Get tasks for this patient only
+    const patientTasks = useMemo(() =>
+        pendingTasks.filter(t => t.patientId === patientId),
+        [pendingTasks, patientId]
     );
 
     if (!patient) {
@@ -74,6 +85,15 @@ export const PatientHistoryView = ({ user, patientId, setCurrentView }: PatientH
 
     const age = calculateAge(patient.birthDate);
     const isChild = age !== null && age < 18;
+
+    const handleCompleteTask = async (noteId: string, taskIndex: number) => {
+        try {
+            await completeTask(noteId, taskIndex);
+            toast.success('Tarea completada');
+        } catch {
+            toast.error('Error al completar tarea');
+        }
+    };
 
     return (
         <div className="p-6 max-w-6xl mx-auto">
@@ -204,27 +224,44 @@ export const PatientHistoryView = ({ user, patientId, setCurrentView }: PatientH
             </div>
 
             {/* Tabs */}
-            <div className="flex space-x-1 bg-slate-100 p-1 rounded-xl mb-6 w-fit">
-                <button
-                    onClick={() => setActiveTab('history')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'history'
-                        ? 'bg-white text-teal-600 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
-                        }`}
-                >
-                    <FileText size={16} />
-                    Historia Clínica
-                </button>
-                <button
-                    onClick={() => setActiveTab('tasks')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'tasks'
-                        ? 'bg-white text-amber-600 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
-                        }`}
-                >
-                    <ListTodo size={16} />
-                    Tareas
-                </button>
+            <div className="flex justify-between items-center mb-6">
+                <div className="flex space-x-1 bg-slate-100 p-1 rounded-xl">
+                    <button
+                        onClick={() => setActiveTab('history')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'history'
+                            ? 'bg-white text-teal-600 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700'
+                            }`}
+                    >
+                        <FileText size={16} />
+                        Historia Clínica
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('tasks')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'tasks'
+                            ? 'bg-white text-amber-600 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700'
+                            }`}
+                    >
+                        <ListTodo size={16} />
+                        Tareas
+                        {patientTasks.length > 0 && (
+                            <span className="bg-amber-100 text-amber-700 text-xs px-1.5 py-0.5 rounded-full font-bold">
+                                {patientTasks.length}
+                            </span>
+                        )}
+                    </button>
+                </div>
+
+                {activeTab === 'tasks' && (
+                    <button
+                        onClick={() => setShowAddTask(true)}
+                        className="flex items-center gap-2 px-3 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-sm font-medium"
+                    >
+                        <Plus size={16} />
+                        Nueva Tarea
+                    </button>
+                )}
             </div>
 
             {/* Content */}
@@ -277,11 +314,56 @@ export const PatientHistoryView = ({ user, patientId, setCurrentView }: PatientH
             )}
 
             {activeTab === 'tasks' && (
-                <div className="bg-white rounded-xl shadow-sm border p-12 text-center text-slate-500">
-                    <ListTodo size={48} className="mx-auto mb-4 text-slate-200" />
-                    Las tareas pendientes se mostrarán aquí.
-                    <p className="text-sm mt-2">Funcionalidad en desarrollo.</p>
+                <div className="space-y-3">
+                    {patientTasks.length === 0 ? (
+                        <div className="bg-white rounded-xl shadow-sm border p-12 text-center text-slate-500">
+                            <ListTodo size={48} className="mx-auto mb-4 text-slate-200" />
+                            No hay tareas pendientes para este paciente.
+                            <button
+                                onClick={() => setShowAddTask(true)}
+                                className="block mx-auto mt-4 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-sm font-medium"
+                            >
+                                Crear primera tarea
+                            </button>
+                        </div>
+                    ) : (
+                        patientTasks.map((task) => (
+                            <div
+                                key={`${task.noteId}-${task.taskIndex}`}
+                                className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex items-start gap-3 hover:border-amber-200 transition-colors"
+                            >
+                                <button
+                                    onClick={() => handleCompleteTask(task.noteId, task.taskIndex)}
+                                    className="mt-0.5 text-amber-400 hover:text-green-600 transition-colors flex-shrink-0"
+                                    title="Marcar como completada"
+                                >
+                                    <Square size={20} />
+                                </button>
+                                <div className="flex-1">
+                                    <div className="text-slate-800 font-medium">{task.text}</div>
+                                    {task.appointmentDate && (
+                                        <div className="text-xs text-slate-400 mt-1">
+                                            {task.appointmentDate.startsWith('standalone-')
+                                                ? 'Tarea independiente'
+                                                : `Sesión: ${formatDate(task.appointmentDate)}`
+                                            }
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))
+                    )}
                 </div>
+            )}
+
+            {/* Add Task Modal */}
+            {showAddTask && patient && (
+                <AddTaskModal
+                    onClose={() => setShowAddTask(false)}
+                    patientId={patient.id}
+                    patientName={patient.name}
+                    userName={profile?.name || user.displayName || user.email || ''}
+                />
             )}
         </div>
     );

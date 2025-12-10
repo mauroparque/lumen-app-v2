@@ -124,29 +124,40 @@ export const PatientModal = ({ onClose, user, profile, existingPatient }: Patien
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const patientData = {
+            const patientData: Record<string, any> = {
                 firstName: form.firstName,
                 lastName: form.lastName,
                 name: `${form.firstName} ${form.lastName}`.trim(),
-                dni: form.dni,
-                email: form.email,
-                phone: form.phone,
-                fee: form.fee ? parseFloat(form.fee) : undefined,
+                dni: form.dni || '',
+                email: form.email || '',
+                phone: form.phone || '',
                 preference: form.preference,
-                office: form.office,
-                professional: form.professional,
-                // New fields
-                birthDate: form.birthDate || undefined,
-                admissionDate: form.admissionDate || undefined,
+                office: form.office || '',
+                professional: form.professional || '',
                 isActive: form.isActive,
-                dischargeType: !form.isActive ? (form.dischargeType as 'clinical' | 'dropout' | undefined) : undefined,
-                dischargeDate: !form.isActive ? form.dischargeDate : undefined,
                 patientSource: form.patientSource,
-                contactName: form.contactName || undefined,
-                contactPhone: form.contactPhone || undefined,
-                contactRelationship: form.contactRelationship as ContactRelationship || undefined,
-                contactRelationshipOther: form.contactRelationship === 'otro' ? form.contactRelationshipOther : undefined
             };
+
+            // Only add optional fields if they have values
+            if (form.fee) patientData.fee = parseFloat(form.fee);
+            if (form.birthDate) patientData.birthDate = form.birthDate;
+            if (form.admissionDate) patientData.admissionDate = form.admissionDate;
+
+            // Discharge info only if inactive
+            if (!form.isActive) {
+                if (form.dischargeType) patientData.dischargeType = form.dischargeType;
+                if (form.dischargeDate) patientData.dischargeDate = form.dischargeDate;
+            }
+
+            // Contact info
+            if (form.contactName) patientData.contactName = form.contactName;
+            if (form.contactPhone) patientData.contactPhone = form.contactPhone;
+            if (form.contactRelationship) {
+                patientData.contactRelationship = form.contactRelationship;
+                if (form.contactRelationship === 'otro' && form.contactRelationshipOther) {
+                    patientData.contactRelationshipOther = form.contactRelationshipOther;
+                }
+            }
 
             if (existingPatient) {
                 await updatePatient(existingPatient.id, patientData);
@@ -247,8 +258,8 @@ export const PatientModal = ({ onClose, user, profile, existingPatient }: Patien
                                 type="button"
                                 onClick={() => setForm({ ...form, patientSource: 'psique' })}
                                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${form.patientSource === 'psique'
-                                        ? 'bg-purple-100 text-purple-700 border-2 border-purple-300'
-                                        : 'bg-slate-100 text-slate-600 border-2 border-transparent hover:bg-slate-200'
+                                    ? 'bg-purple-100 text-purple-700 border-2 border-purple-300'
+                                    : 'bg-slate-100 text-slate-600 border-2 border-transparent hover:bg-slate-200'
                                     }`}
                             >
                                 Psique Salud Mental
@@ -257,8 +268,8 @@ export const PatientModal = ({ onClose, user, profile, existingPatient }: Patien
                                 type="button"
                                 onClick={() => setForm({ ...form, patientSource: 'particular' })}
                                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${form.patientSource === 'particular'
-                                        ? 'bg-teal-100 text-teal-700 border-2 border-teal-300'
-                                        : 'bg-slate-100 text-slate-600 border-2 border-transparent hover:bg-slate-200'
+                                    ? 'bg-teal-100 text-teal-700 border-2 border-teal-300'
+                                    : 'bg-slate-100 text-slate-600 border-2 border-transparent hover:bg-slate-200'
                                     }`}
                             >
                                 Particular

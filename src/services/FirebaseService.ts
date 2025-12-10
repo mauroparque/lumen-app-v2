@@ -1,8 +1,8 @@
-import { collection, doc, query, where, orderBy, limit, onSnapshot, addDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, doc, query, where, orderBy, limit, onSnapshot, addDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp, Timestamp, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { PATIENTS_COLLECTION, APPOINTMENTS_COLLECTION, PAYMENTS_COLLECTION, BILLING_QUEUE_COLLECTION } from '../lib/routes';
 import { IDataService } from './IDataService';
-import { Patient, Appointment, Payment, PatientInput, AppointmentInput, PaymentInput } from '../types';
+import { Patient, Appointment, Payment, PatientInput, AppointmentInput, PaymentInput, PatientBillingData } from '../types';
 
 export class FirebaseService implements IDataService {
     private uid: string;
@@ -128,6 +128,43 @@ export class FirebaseService implements IDataService {
         await deleteDoc(docRef);
     }
 
+    async deleteRecurringSeries(recurrenceId: string): Promise<number> {
+        const appointmentsRef = collection(db, APPOINTMENTS_COLLECTION);
+        const q = query(appointmentsRef, where('recurrenceId', '==', recurrenceId));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) return 0;
+
+        const batch = writeBatch(db);
+        snapshot.docs.forEach(docSnap => {
+            batch.delete(docSnap.ref);
+        });
+
+        await batch.commit();
+        return snapshot.docs.length;
+    }
+
+    async deleteRecurringFromDate(recurrenceId: string, fromDate: string): Promise<number> {
+        const appointmentsRef = collection(db, APPOINTMENTS_COLLECTION);
+        const q = query(appointmentsRef, where('recurrenceId', '==', recurrenceId));
+        const snapshot = await getDocs(q);
+
+        const toDelete = snapshot.docs.filter(docSnap => {
+            const data = docSnap.data();
+            return data.date >= fromDate;
+        });
+
+        if (toDelete.length === 0) return 0;
+
+        const batch = writeBatch(db);
+        toDelete.forEach(docSnap => {
+            batch.delete(docSnap.ref);
+        });
+
+        await batch.commit();
+        return toDelete.length;
+    }
+
     async addPayment(payment: PaymentInput, appointmentId?: string): Promise<string> {
         const batch = writeBatch(db);
         const paymentRef = doc(collection(db, PAYMENTS_COLLECTION));
@@ -152,7 +189,7 @@ export class FirebaseService implements IDataService {
         await deleteDoc(docRef);
     }
 
-    async requestBatchInvoice(appointments: Appointment[], patientData: any): Promise<string> {
+    async requestBatchInvoice(appointments: Appointment[], patientData: PatientBillingData): Promise<string> {
         const queueRef = collection(db, BILLING_QUEUE_COLLECTION);
 
         const totalPrice = appointments.reduce((sum, appt) => sum + (appt.price || 0), 0);

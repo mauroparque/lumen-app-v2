@@ -1,4 +1,4 @@
-import { Patient, Appointment, Payment, PatientInput, AppointmentInput, PaymentInput } from '../types';
+import { Patient, Appointment, Payment, PatientInput, AppointmentInput, PaymentInput, PatientBillingData } from '../types';
 
 export interface IDataService {
     // Lectura (Suscripciones en tiempo real)
@@ -15,10 +15,12 @@ export interface IDataService {
     addRecurringAppointments(baseAppointment: AppointmentInput, dates: string[], recurrenceRule?: string): Promise<void>;
     updateAppointment(id: string, data: Partial<Appointment>): Promise<void>;
     deleteAppointment(id: string): Promise<void>;
+    deleteRecurringSeries(recurrenceId: string): Promise<number>;
+    deleteRecurringFromDate(recurrenceId: string, fromDate: string): Promise<number>;
 
     addPayment(payment: PaymentInput, appointmentId?: string): Promise<string>;
     deletePayment(id: string): Promise<void>;
 
     // Facturación
-    requestBatchInvoice(appointments: Appointment[], patientData: any): Promise<string>;
+    requestBatchInvoice(appointments: Appointment[], patientData: PatientBillingData): Promise<string>;
 }

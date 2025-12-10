@@ -1,4 +1,9 @@
-export type View = 'home' | 'dashboard' | 'calendar' | 'patients' | 'payments' | 'billing';
+import { Timestamp } from 'firebase/firestore';
+
+export type View = 'home' | 'dashboard' | 'calendar' | 'patients' | 'payments' | 'billing' | 'patient-history';
+
+// Relationship types for child patient contacts
+export type ContactRelationship = 'padre' | 'madre' | 'amigo' | 'pareja' | 'otro';
 
 export interface Patient {
     id: string;
@@ -12,6 +17,26 @@ export interface Patient {
     preference?: 'presencial' | 'online';
     office?: string;
     professional?: string;
+
+    // Status
+    isActive: boolean;
+
+    // Important dates
+    birthDate?: string;  // YYYY-MM-DD format
+    admissionDate?: string;  // YYYY-MM-DD format
+
+    // Discharge info (only if isActive = false)
+    dischargeType?: 'clinical' | 'dropout';  // Alta clínica o abandono
+    dischargeDate?: string;
+
+    // Patient type
+    patientSource?: 'psique' | 'particular';
+
+    // Contact info (for child patients)
+    contactName?: string;
+    contactPhone?: string;
+    contactRelationship?: ContactRelationship;
+    contactRelationshipOther?: string;  // If relationship is 'otro'
 }
 
 export interface Appointment {
@@ -46,7 +71,7 @@ export interface Payment {
     patientId?: string;
     patientName: string;
     amount: number;
-    date: any; // Firebase Timestamp
+    date: Timestamp | null;
     concept: string;
 }
 
@@ -61,8 +86,8 @@ export interface ClinicalNote {
     content: string;
     attachments: string[];
     tasks?: { text: string; completed: boolean }[];
-    createdAt: any;
-    updatedAt?: any;
+    createdAt: Timestamp;
+    updatedAt?: Timestamp;
     createdBy: string;
 }
 
@@ -73,5 +98,21 @@ export interface StaffProfile {
     role: 'admin' | 'professional' | 'secretary';
     specialty?: string;
     color?: string;
-    createdAt: any;
+    createdAt: Timestamp | ReturnType<typeof import('firebase/firestore').serverTimestamp>;
 }
+
+// Billing Types
+export interface PatientBillingData {
+    id: string;
+    name: string;
+    email?: string;
+    dni?: string;
+}
+
+export type BillingRequestStatus = 'pending' | 'processing' | 'completed' | 'error' | 'error_sending' | 'error_config';
+
+export interface BillingLineItem {
+    description: string;
+    amount: number;
+}
+

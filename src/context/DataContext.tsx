@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { Patient, Appointment } from '../types';
 import { useService } from './ServiceContext';
 
@@ -50,9 +50,17 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         };
     }, [service]);
 
+    // Memoize the context value to prevent unnecessary re-renders
+    const value = useMemo(() => ({
+        patients,
+        appointments,
+        loading
+    }), [patients, appointments, loading]);
+
     return (
-        <DataContext.Provider value={{ patients, appointments, loading }}>
+        <DataContext.Provider value={value}>
             {children}
         </DataContext.Provider>
     );
 };
+

@@ -19,6 +19,7 @@ import { PatientsView } from './views/PatientsView';
 import { PaymentsView } from './views/PaymentsView';
 import { BillingView } from './views/BillingView';
 import { DashboardView } from './views/DashboardView';
+import { PatientHistoryView } from './views/PatientHistoryView';
 
 // Global declaration for initial auth token
 declare global {
@@ -32,6 +33,7 @@ export default function LumenApp() {
 
     const [currentView, setCurrentView] = useState<View>('dashboard');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
 
     // Auth Init
     useEffect(() => {
@@ -84,7 +86,20 @@ export default function LumenApp() {
                             <CalendarView user={user} profile={profile} />
                         )}
                         {currentView === 'patients' && (
-                            <PatientsView user={user} profile={profile} />
+                            <PatientsView
+                                user={user}
+                                profile={profile}
+                                setCurrentView={setCurrentView}
+                                setSelectedPatientId={setSelectedPatientId}
+                            />
+                        )}
+                        {currentView === 'patient-history' && (
+                            <PatientHistoryView
+                                user={user}
+                                profile={profile}
+                                patientId={selectedPatientId}
+                                setCurrentView={setCurrentView}
+                            />
                         )}
                         {currentView === 'payments' && (
                             <PaymentsView user={user} />
@@ -98,3 +113,4 @@ export default function LumenApp() {
         </ServiceProvider>
     );
 }
+

@@ -1,49 +1,43 @@
 import React, { useState } from 'react';
-import { doc, collection, writeBatch, Timestamp } from 'firebase/firestore';
-import { db, appId, CLINIC_ID } from '../../lib/firebase';
-import { User } from 'firebase/auth';
-import { Appointment } from '../../types';
+import { Appointment, PaymentInput } from '../../types';
 import { ModalOverlay } from '../ui';
 import { DollarSign, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useDataActions } from '../../hooks/useDataActions';
 
 interface PaymentModalProps {
     appointment: Appointment;
     onClose: () => void;
-    user: User;
 }
 
-export const PaymentModal = ({ appointment, onClose, user }: PaymentModalProps) => {
+export const PaymentModal = ({ appointment, onClose }: PaymentModalProps) => {
     const [amount, setAmount] = useState(appointment.price?.toString() || '');
     const [concept, setConcept] = useState(`Sesión del ${new Date(appointment.date).toLocaleDateString()}`);
+    const { addPayment } = useDataActions();
 
     const handlePay = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const batch = writeBatch(db);
-
-            const paymentRef = doc(collection(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'payments'));
-            batch.set(paymentRef, {
+            const paymentData: PaymentInput = {
                 appointmentId: appointment.id,
                 patientId: appointment.patientId,
                 patientName: appointment.patientName,
                 amount: parseFloat(amount),
                 concept: concept,
-                date: Timestamp.now(),
-                createdByUid: user.uid
-            });
+                date: null // Will be set by service as Timestamp.now()
+            };
 
-            const apptRef = doc(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'appointments', appointment.id);
-            batch.update(apptRef, {
-                isPaid: true
-            });
-
-            await batch.commit();
+            await addPayment(paymentData, appointment.id);
             toast.success('Pago registrado correctamente');
             onClose();
-        } catch (error) {
+        } catch (error: unknown) {
             console.error(error);
-            toast.error('Error al registrar el pago');
+            // Handle permission errors specifically
+            if (error && typeof error === 'object' && 'code' in error && error.code === 'permission-denied') {
+                toast.error('No tienes permisos para modificar este turno facturado');
+            } else {
+                toast.error('Error al registrar el pago');
+            }
         }
     };
 

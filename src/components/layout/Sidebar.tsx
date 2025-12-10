@@ -1,4 +1,4 @@
-import { Home, Calendar as CalendarIcon, Users, DollarSign, FileText, LogOut, Receipt } from 'lucide-react';
+import { Home, Calendar as CalendarIcon, Users, DollarSign, FileText, LogOut } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { User } from 'firebase/auth';

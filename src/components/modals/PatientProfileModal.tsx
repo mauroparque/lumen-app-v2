@@ -24,8 +24,8 @@ export const PatientProfileModal = ({ patient, onClose, user }: PatientProfileMo
             id: h.id, date: new Date(h.date + 'T' + h.time), type: 'charge',
             amount: h.price || 0, description: `Sesión ${h.type}`, isPaid: h.isPaid
         })),
-        ...payments.map(p => ({
-            id: p.id, date: p.date.toDate(), type: 'payment',
+        ...payments.filter(p => p.date !== null).map(p => ({
+            id: p.id, date: p.date!.toDate(), type: 'payment',
             amount: p.amount, description: `Pago: ${p.concept}`, isPaid: true
         }))
     ].sort((a, b) => b.date.getTime() - a.date.getTime());

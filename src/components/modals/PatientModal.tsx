@@ -4,14 +4,43 @@ import { ModalOverlay } from '../ui';
 import { useDataActions } from '../../hooks/useDataActions';
 import { usePatients } from '../../hooks/usePatients';
 import { toast } from 'sonner';
-import { StaffProfile } from '../../types';
+import { StaffProfile, ContactRelationship, Patient } from '../../types';
+import { ChevronDown, ChevronUp, Baby, User as UserIcon } from 'lucide-react';
 
 interface PatientModalProps {
     onClose: () => void;
     user: User;
     profile: StaffProfile | null;
-    existingPatient?: any;
+    existingPatient?: Patient;
 }
+
+const CONTACT_RELATIONSHIPS: { value: ContactRelationship; label: string }[] = [
+    { value: 'padre', label: 'Padre' },
+    { value: 'madre', label: 'Madre' },
+    { value: 'amigo', label: 'Amigo/a' },
+    { value: 'pareja', label: 'Pareja' },
+    { value: 'otro', label: 'Otro' }
+];
+
+const getTodayString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const calculateAge = (birthDate: string): number | null => {
+    if (!birthDate) return null;
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+    }
+    return age;
+};
 
 export const PatientModal = ({ onClose, user, profile, existingPatient }: PatientModalProps) => {
     const [form, setForm] = useState({
@@ -23,26 +52,62 @@ export const PatientModal = ({ onClose, user, profile, existingPatient }: Patien
         fee: '',
         preference: 'presencial' as 'presencial' | 'online',
         office: '',
-        professional: profile?.name || user.displayName || ''
+        professional: profile?.name || user.displayName || '',
+        // New fields
+        birthDate: '',
+        admissionDate: getTodayString(),
+        isActive: true,
+        dischargeType: '' as '' | 'clinical' | 'dropout',
+        dischargeDate: '',
+        patientSource: 'particular' as 'psique' | 'particular',
+        contactName: '',
+        contactPhone: '',
+        contactRelationship: '' as ContactRelationship | '',
+        contactRelationshipOther: ''
     });
 
+    const [showAdvanced, setShowAdvanced] = useState(false);
     const { patients } = usePatients(user);
     const [isCustomProfessional, setIsCustomProfessional] = useState(false);
     const { addPatient, updatePatient } = useDataActions();
 
+    // Calculate if patient is child (< 18)
+    const isChild = useMemo(() => {
+        const age = calculateAge(form.birthDate);
+        return age !== null && age < 18;
+    }, [form.birthDate]);
+
+    const age = useMemo(() => calculateAge(form.birthDate), [form.birthDate]);
+
     useEffect(() => {
         if (existingPatient) {
             setForm({
-                firstName: existingPatient.name.split(' ')[0] || '',
-                lastName: existingPatient.name.split(' ').slice(1).join(' ') || '',
+                firstName: existingPatient.firstName || existingPatient.name.split(' ')[0] || '',
+                lastName: existingPatient.lastName || existingPatient.name.split(' ').slice(1).join(' ') || '',
                 dni: existingPatient.dni || '',
                 email: existingPatient.email || '',
                 phone: existingPatient.phone || '',
                 fee: existingPatient.fee?.toString() || '',
                 preference: existingPatient.preference || 'presencial',
                 office: existingPatient.office || '',
-                professional: existingPatient.professional || profile?.name || user.displayName || ''
+                professional: existingPatient.professional || profile?.name || user.displayName || '',
+                // New fields
+                birthDate: existingPatient.birthDate || '',
+                admissionDate: existingPatient.admissionDate || '',
+                isActive: existingPatient.isActive ?? true,
+                dischargeType: existingPatient.dischargeType || '',
+                dischargeDate: existingPatient.dischargeDate || '',
+                patientSource: existingPatient.patientSource || 'particular',
+                contactName: existingPatient.contactName || '',
+                contactPhone: existingPatient.contactPhone || '',
+                contactRelationship: existingPatient.contactRelationship || '',
+                contactRelationshipOther: existingPatient.contactRelationshipOther || ''
             });
+            // Show advanced if any advanced field has data
+            if (existingPatient.birthDate || existingPatient.admissionDate ||
+                existingPatient.contactName || !existingPatient.isActive) {
+                setShowAdvanced(true);
+            }
         }
     }, [existingPatient, profile?.name, user.displayName]);
 
@@ -60,9 +125,27 @@ export const PatientModal = ({ onClose, user, profile, existingPatient }: Patien
         e.preventDefault();
         try {
             const patientData = {
-                ...form,
+                firstName: form.firstName,
+                lastName: form.lastName,
                 name: `${form.firstName} ${form.lastName}`.trim(),
-                fee: form.fee ? parseFloat(form.fee) : 0
+                dni: form.dni,
+                email: form.email,
+                phone: form.phone,
+                fee: form.fee ? parseFloat(form.fee) : undefined,
+                preference: form.preference,
+                office: form.office,
+                professional: form.professional,
+                // New fields
+                birthDate: form.birthDate || undefined,
+                admissionDate: form.admissionDate || undefined,
+                isActive: form.isActive,
+                dischargeType: !form.isActive ? (form.dischargeType as 'clinical' | 'dropout' | undefined) : undefined,
+                dischargeDate: !form.isActive ? form.dischargeDate : undefined,
+                patientSource: form.patientSource,
+                contactName: form.contactName || undefined,
+                contactPhone: form.contactPhone || undefined,
+                contactRelationship: form.contactRelationship as ContactRelationship || undefined,
+                contactRelationshipOther: form.contactRelationship === 'otro' ? form.contactRelationshipOther : undefined
             };
 
             if (existingPatient) {
@@ -81,14 +164,15 @@ export const PatientModal = ({ onClose, user, profile, existingPatient }: Patien
 
     return (
         <ModalOverlay onClose={onClose}>
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
                 <h2 className="text-xl font-bold mb-4 text-slate-800">
                     {existingPatient ? 'Editar Paciente' : 'Nuevo Paciente'}
                 </h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* Basic Info */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Nombre *</label>
                             <input
                                 required
                                 className="w-full p-2 border rounded-lg"
@@ -97,7 +181,7 @@ export const PatientModal = ({ onClose, user, profile, existingPatient }: Patien
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Apellido</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Apellido *</label>
                             <input
                                 required
                                 className="w-full p-2 border rounded-lg"
@@ -107,13 +191,31 @@ export const PatientModal = ({ onClose, user, profile, existingPatient }: Patien
                         </div>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">DNI (Opcional)</label>
-                        <input
-                            className="w-full p-2 border rounded-lg"
-                            value={form.dni}
-                            onChange={e => setForm({ ...form, dni: e.target.value })}
-                        />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">DNI</label>
+                            <input
+                                className="w-full p-2 border rounded-lg"
+                                value={form.dni}
+                                onChange={e => setForm({ ...form, dni: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Fecha de Nacimiento
+                                {age !== null && (
+                                    <span className="ml-2 text-xs text-slate-500">
+                                        ({age} años{isChild && ' - Menor'})
+                                    </span>
+                                )}
+                            </label>
+                            <input
+                                type="date"
+                                className="w-full p-2 border rounded-lg"
+                                value={form.birthDate}
+                                onChange={e => setForm({ ...form, birthDate: e.target.value })}
+                            />
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -137,6 +239,90 @@ export const PatientModal = ({ onClose, user, profile, existingPatient }: Patien
                         </div>
                     </div>
 
+                    {/* Patient Source Badge */}
+                    <div className="flex items-center gap-4">
+                        <label className="block text-sm font-medium text-slate-700">Origen:</label>
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setForm({ ...form, patientSource: 'psique' })}
+                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${form.patientSource === 'psique'
+                                        ? 'bg-purple-100 text-purple-700 border-2 border-purple-300'
+                                        : 'bg-slate-100 text-slate-600 border-2 border-transparent hover:bg-slate-200'
+                                    }`}
+                            >
+                                Psique Salud Mental
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setForm({ ...form, patientSource: 'particular' })}
+                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${form.patientSource === 'particular'
+                                        ? 'bg-teal-100 text-teal-700 border-2 border-teal-300'
+                                        : 'bg-slate-100 text-slate-600 border-2 border-transparent hover:bg-slate-200'
+                                    }`}
+                            >
+                                Particular
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Child Patient Contact Info */}
+                    {isChild && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+                            <div className="flex items-center gap-2 text-amber-700 font-medium">
+                                <Baby size={18} />
+                                <span>Datos del Contacto (Menor de edad)</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del Contacto</label>
+                                    <input
+                                        className="w-full p-2 border rounded-lg"
+                                        value={form.contactName}
+                                        onChange={e => setForm({ ...form, contactName: e.target.value })}
+                                        placeholder="Nombre del responsable"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono Contacto</label>
+                                    <input
+                                        type="tel"
+                                        className="w-full p-2 border rounded-lg"
+                                        value={form.contactPhone}
+                                        onChange={e => setForm({ ...form, contactPhone: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Parentesco</label>
+                                    <select
+                                        className="w-full p-2 border rounded-lg bg-white"
+                                        value={form.contactRelationship}
+                                        onChange={e => setForm({ ...form, contactRelationship: e.target.value as ContactRelationship })}
+                                    >
+                                        <option value="">Seleccionar...</option>
+                                        {CONTACT_RELATIONSHIPS.map(r => (
+                                            <option key={r.value} value={r.value}>{r.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                {form.contactRelationship === 'otro' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Especificar</label>
+                                        <input
+                                            className="w-full p-2 border rounded-lg"
+                                            value={form.contactRelationshipOther}
+                                            onChange={e => setForm({ ...form, contactRelationshipOther: e.target.value })}
+                                            placeholder="Ej: Tutor, Abuelo..."
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Clinical Settings */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Honorarios</label>
@@ -152,7 +338,7 @@ export const PatientModal = ({ onClose, user, profile, existingPatient }: Patien
                             <select
                                 className="w-full p-2 border rounded-lg bg-white"
                                 value={form.preference}
-                                onChange={(e: any) => setForm({ ...form, preference: e.target.value })}
+                                onChange={e => setForm({ ...form, preference: e.target.value as 'presencial' | 'online' })}
                             >
                                 <option value="presencial">Presencial</option>
                                 <option value="online">Online</option>
@@ -172,6 +358,7 @@ export const PatientModal = ({ onClose, user, profile, existingPatient }: Patien
                         </div>
                     )}
 
+                    {/* Professional */}
                     <div>
                         <div className="flex justify-between items-center mb-1">
                             <label className="block text-sm font-medium text-slate-700">Profesional Asignado</label>
@@ -212,6 +399,74 @@ export const PatientModal = ({ onClose, user, profile, existingPatient }: Patien
                             </select>
                         )}
                     </div>
+
+                    {/* Advanced Section */}
+                    <button
+                        type="button"
+                        onClick={() => setShowAdvanced(!showAdvanced)}
+                        className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700"
+                    >
+                        {showAdvanced ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        {showAdvanced ? 'Ocultar opciones avanzadas' : 'Mostrar opciones avanzadas'}
+                    </button>
+
+                    {showAdvanced && (
+                        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Fecha de Admisión</label>
+                                    <input
+                                        type="date"
+                                        className="w-full p-2 border rounded-lg"
+                                        value={form.admissionDate}
+                                        onChange={e => setForm({ ...form, admissionDate: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
+                                    <select
+                                        className="w-full p-2 border rounded-lg bg-white"
+                                        value={form.isActive ? 'active' : 'inactive'}
+                                        onChange={e => setForm({
+                                            ...form,
+                                            isActive: e.target.value === 'active',
+                                            dischargeType: e.target.value === 'active' ? '' : form.dischargeType,
+                                            dischargeDate: e.target.value === 'active' ? '' : form.dischargeDate
+                                        })}
+                                    >
+                                        <option value="active">Activo</option>
+                                        <option value="inactive">Inactivo (Alta)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {!form.isActive && (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Alta</label>
+                                        <select
+                                            className="w-full p-2 border rounded-lg bg-white"
+                                            value={form.dischargeType}
+                                            onChange={e => setForm({ ...form, dischargeType: e.target.value as 'clinical' | 'dropout' })}
+                                        >
+                                            <option value="">Seleccionar...</option>
+                                            <option value="clinical">Alta Clínica</option>
+                                            <option value="dropout">Abandono</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Fecha de Alta</label>
+                                        <input
+                                            type="date"
+                                            className="w-full p-2 border rounded-lg"
+                                            value={form.dischargeDate}
+                                            onChange={e => setForm({ ...form, dischargeDate: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     <div className="flex justify-end space-x-3 pt-4">
                         <button

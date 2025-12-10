@@ -8,9 +8,7 @@ import {
     addDoc,
     updateDoc,
     doc,
-    Timestamp,
-    setDoc,
-    getDocs
+    Timestamp
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage, appId, CLINIC_ID } from '../lib/firebase';

@@ -1,4 +1,5 @@
 import { useService } from '../context/ServiceContext';
+import { PatientInput, AppointmentInput, PaymentInput, Patient, Appointment, PatientBillingData } from '../types';
 
 export const useDataActions = () => {
     const service = useService();
@@ -9,23 +10,23 @@ export const useDataActions = () => {
         return service;
     }
 
-    const addPatient = async (patient: any) => {
+    const addPatient = async (patient: PatientInput) => {
         return ensureService().addPatient(patient);
     };
 
-    const addAppointment = async (appointment: any) => {
+    const addAppointment = async (appointment: AppointmentInput) => {
         return ensureService().addAppointment(appointment);
     };
 
-    const addRecurringAppointments = async (baseAppointment: any, dates: string[], recurrenceRule: string = 'WEEKLY') => {
+    const addRecurringAppointments = async (baseAppointment: AppointmentInput, dates: string[], recurrenceRule: string = 'WEEKLY') => {
         return ensureService().addRecurringAppointments(baseAppointment, dates, recurrenceRule);
     };
 
-    const addPayment = async (payment: any, appointmentId?: string) => {
+    const addPayment = async (payment: PaymentInput, appointmentId?: string) => {
         return ensureService().addPayment(payment, appointmentId);
     };
 
-    const deleteItem = async (collectionName: string, id: string) => {
+    const deleteItem = async (collectionName: 'patients' | 'appointments' | 'payments', id: string) => {
         const s = ensureService();
         if (collectionName === 'patients') {
             return s.deletePatient(id);
@@ -37,17 +38,36 @@ export const useDataActions = () => {
         throw new Error(`Unknown collection: ${collectionName}`);
     };
 
-    const updateAppointment = async (id: string, data: any) => {
+    const updateAppointment = async (id: string, data: Partial<Appointment>) => {
         return ensureService().updateAppointment(id, data);
     };
 
-    const updatePatient = async (id: string, data: any) => {
+    const updatePatient = async (id: string, data: Partial<Patient>) => {
         return ensureService().updatePatient(id, data);
     };
 
-    const requestBatchInvoice = async (appointments: any[], patientData: any) => {
+    const requestBatchInvoice = async (appointments: Appointment[], patientData: PatientBillingData) => {
         return ensureService().requestBatchInvoice(appointments, patientData);
     };
 
-    return { addPatient, addAppointment, addRecurringAppointments, updateAppointment, updatePatient, addPayment, deleteItem, requestBatchInvoice };
+    const deleteRecurringSeries = async (recurrenceId: string) => {
+        return ensureService().deleteRecurringSeries(recurrenceId);
+    };
+
+    const deleteRecurringFromDate = async (recurrenceId: string, fromDate: string) => {
+        return ensureService().deleteRecurringFromDate(recurrenceId, fromDate);
+    };
+
+    return {
+        addPatient,
+        addAppointment,
+        addRecurringAppointments,
+        updateAppointment,
+        updatePatient,
+        addPayment,
+        deleteItem,
+        requestBatchInvoice,
+        deleteRecurringSeries,
+        deleteRecurringFromDate
+    };
 };

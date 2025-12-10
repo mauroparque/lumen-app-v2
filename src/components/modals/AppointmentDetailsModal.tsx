@@ -1,12 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { deleteDoc, doc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
-import { db, appId, CLINIC_ID } from '../../lib/firebase';
 import { User } from 'firebase/auth';
 import { Appointment } from '../../types';
 import { ModalOverlay } from '../ui';
 import { Edit2, Trash2, Video, MapPin, CheckCircle, FileText, User as UserIcon, DollarSign, Calendar as CalendarIcon, Paperclip, Save, X, Download, RefreshCw, Loader2, Plus, ListTodo, Square, CheckSquare } from 'lucide-react';
 import { toast } from 'sonner';
-import { useInvoiceStatus } from '../../hooks/useInvoiceStatus';
+import { useBillingStatus } from '../../hooks/useBillingStatus';
 import { useDataActions } from '../../hooks/useDataActions';
 import { useClinicalNotes } from '../../hooks/useClinicalNotes';
 
@@ -21,7 +19,7 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
     const [activeTab, setActiveTab] = useState<'details' | 'history'>('details');
     const { useClinicalNote, saveNote, uploadAttachment, loading: saving } = useClinicalNotes(user);
     const { note, loadingNote } = useClinicalNote(appointment.id);
-    const { requestBatchInvoice } = useDataActions();
+    const { requestBatchInvoice, deleteItem, deleteRecurringSeries, deleteRecurringFromDate } = useDataActions();
 
     const [content, setContent] = useState('');
     const [attachments, setAttachments] = useState<string[]>([]);
@@ -31,7 +29,7 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
 
     const [trackingId, setTrackingId] = useState<string | null>(null);
     const [isRequesting, setIsRequesting] = useState(false);
-    const invoiceStatus = useInvoiceStatus(trackingId);
+    const invoiceStatus = useBillingStatus(trackingId);
 
     // Estado para el diálogo de confirmación de borrado
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -48,12 +46,16 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
     const handleDeleteSingle = async () => {
         setIsDeleting(true);
         try {
-            await deleteDoc(doc(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'appointments', appointment.id));
+            await deleteItem('appointments', appointment.id);
             toast.success('Turno eliminado');
             onClose();
-        } catch (error) {
+        } catch (error: unknown) {
             console.error(error);
-            toast.error('Error al eliminar el turno');
+            if (error && typeof error === 'object' && 'code' in error && error.code === 'permission-denied') {
+                toast.error('No se puede eliminar un turno facturado');
+            } else {
+                toast.error('Error al eliminar el turno');
+            }
         } finally {
             setIsDeleting(false);
             setShowDeleteDialog(false);
@@ -65,33 +67,20 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
 
         setIsDeleting(true);
         try {
-            const appointmentsRef = collection(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'appointments');
-            const q = query(appointmentsRef, where('recurrenceId', '==', appointment.recurrenceId));
-            const snapshot = await getDocs(q);
-
-            // Filtrar solo los que son >= a la fecha del turno actual
-            const currentDate = appointment.date;
-            const toDelete = snapshot.docs.filter(docSnap => {
-                const data = docSnap.data();
-                return data.date >= currentDate;
-            });
-
-            if (toDelete.length === 0) {
+            const count = await deleteRecurringFromDate(appointment.recurrenceId, appointment.date);
+            if (count === 0) {
                 toast.info('No hay turnos para eliminar');
                 return;
             }
-
-            const batch = writeBatch(db);
-            toDelete.forEach(docSnap => {
-                batch.delete(docSnap.ref);
-            });
-
-            await batch.commit();
-            toast.success(`${toDelete.length} turno(s) eliminado(s)`);
+            toast.success(`${count} turno(s) eliminado(s)`);
             onClose();
-        } catch (error) {
+        } catch (error: unknown) {
             console.error(error);
-            toast.error('Error al eliminar los turnos');
+            if (error && typeof error === 'object' && 'code' in error && error.code === 'permission-denied') {
+                toast.error('No se pueden eliminar turnos facturados');
+            } else {
+                toast.error('Error al eliminar los turnos');
+            }
         } finally {
             setIsDeleting(false);
             setShowDeleteDialog(false);
@@ -103,21 +92,16 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
 
         setIsDeleting(true);
         try {
-            const appointmentsRef = collection(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'appointments');
-            const q = query(appointmentsRef, where('recurrenceId', '==', appointment.recurrenceId));
-            const snapshot = await getDocs(q);
-
-            const batch = writeBatch(db);
-            snapshot.docs.forEach(docSnap => {
-                batch.delete(docSnap.ref);
-            });
-
-            await batch.commit();
-            toast.success(`${snapshot.docs.length} turnos de la serie eliminados`);
+            const count = await deleteRecurringSeries(appointment.recurrenceId);
+            toast.success(`${count} turnos de la serie eliminados`);
             onClose();
-        } catch (error) {
+        } catch (error: unknown) {
             console.error(error);
-            toast.error('Error al eliminar la serie');
+            if (error && typeof error === 'object' && 'code' in error && error.code === 'permission-denied') {
+                toast.error('No se pueden eliminar turnos facturados');
+            } else {
+                toast.error('Error al eliminar la serie');
+            }
         } finally {
             setIsDeleting(false);
             setShowDeleteDialog(false);

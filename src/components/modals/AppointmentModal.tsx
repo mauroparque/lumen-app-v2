@@ -16,7 +16,7 @@ interface AppointmentModalProps {
     initialTime?: string;
 }
 
-export const AppointmentModal = ({ onClose, patients, user, profile, existingAppointment, initialDate, initialTime }: AppointmentModalProps) => {
+export const AppointmentModal = ({ onClose, patients, profile, existingAppointment, initialDate, initialTime }: AppointmentModalProps) => {
     const { addAppointment, updateAppointment, addRecurringAppointments } = useDataActions();
 
     const getTodayString = () => {
@@ -72,6 +72,7 @@ export const AppointmentModal = ({ onClose, patients, user, profile, existingApp
                 ...form,
                 patientName: patient?.name || 'Unknown',
                 patientEmail: patient?.email,
+                status: existingAppointment?.status || 'programado' as const,
             };
 
             if (existingAppointment) {

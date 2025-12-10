@@ -246,7 +246,6 @@ export const PaymentsView = ({ user }: PaymentsViewProps) => {
                 <PaymentModal
                     appointment={selectedAppointment}
                     onClose={() => setPaymentModalOpen(false)}
-                    user={user}
                 />
             )}
         </div>

@@ -116,7 +116,7 @@ export const AppointmentModal = ({ onClose, patients, profile, existingAppointme
                         <label className="block text-sm font-medium text-slate-700 mb-1">Paciente</label>
                         <select className="w-full p-2 border rounded-lg bg-white" value={form.patientId} onChange={e => setForm({ ...form, patientId: e.target.value })} required>
                             <option value="">Seleccionar paciente...</option>
-                            {patients.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            {[...patients].sort((a, b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
                     </div>
 

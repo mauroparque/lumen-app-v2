@@ -395,7 +395,7 @@ export const CalendarView = ({ user, profile }: CalendarViewProps) => {
                                                                 );
                                                             })}
                                                         </div>
-                                                        <button onClick={() => handleNewAppointment(day, `${hour < 10 ? '0' + hour : hour}:00`)} className="absolute inset-0 w-full h-full flex items-center justify-center opacity-0 group-hover:opacity-100 text-teal-300 hover:text-teal-600 transition-opacity z-0">
+                                                        <button onClick={(e) => { e.stopPropagation(); handleNewAppointment(day, `${hour < 10 ? '0' + hour : hour}:00`); }} className="absolute inset-0 w-full h-full flex items-center justify-center opacity-0 group-hover:opacity-100 text-teal-300 hover:text-teal-600 transition-opacity -z-10">
                                                             <Plus size={12} />
                                                         </button>
                                                     </div>

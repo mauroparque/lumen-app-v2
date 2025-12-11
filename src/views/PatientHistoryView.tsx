@@ -16,6 +16,7 @@ interface PatientHistoryViewProps {
     profile: StaffProfile | null;
     patientId: string | null;
     setCurrentView: (view: View) => void;
+    initialTab?: 'history' | 'tasks';
 }
 
 const calculateAge = (birthDate?: string): number | null => {
@@ -35,8 +36,8 @@ const formatDate = (dateStr: string): string => {
     return date.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 };
 
-export const PatientHistoryView = ({ user, profile, patientId, setCurrentView }: PatientHistoryViewProps) => {
-    const [activeTab, setActiveTab] = useState<'history' | 'tasks'>('history');
+export const PatientHistoryView = ({ user, profile, patientId, setCurrentView, initialTab = 'history' }: PatientHistoryViewProps) => {
+    const [activeTab, setActiveTab] = useState<'history' | 'tasks'>(initialTab);
     const [showAddTask, setShowAddTask] = useState(false);
     const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
     const { patients } = usePatients(user);

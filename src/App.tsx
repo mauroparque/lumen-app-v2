@@ -35,6 +35,7 @@ export default function LumenApp() {
     const [currentView, setCurrentView] = useState<View>('dashboard');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+    const [patientHistoryInitialTab, setPatientHistoryInitialTab] = useState<'history' | 'tasks'>('history');
 
     // Auth Init
     useEffect(() => {
@@ -92,6 +93,7 @@ export default function LumenApp() {
                                 profile={profile}
                                 setCurrentView={setCurrentView}
                                 setSelectedPatientId={setSelectedPatientId}
+                                setPatientHistoryInitialTab={setPatientHistoryInitialTab}
                             />
                         )}
                         {currentView === 'patient-history' && (
@@ -100,6 +102,7 @@ export default function LumenApp() {
                                 profile={profile}
                                 patientId={selectedPatientId}
                                 setCurrentView={setCurrentView}
+                                initialTab={patientHistoryInitialTab}
                             />
                         )}
                         {currentView === 'payments' && (

@@ -19,6 +19,7 @@ interface PatientsViewProps {
     profile: StaffProfile | null;
     setCurrentView: (view: View) => void;
     setSelectedPatientId: (id: string | null) => void;
+    setPatientHistoryInitialTab: (tab: 'history' | 'tasks') => void;
 }
 
 const calculateAge = (birthDate?: string): number | null => {
@@ -33,7 +34,7 @@ const calculateAge = (birthDate?: string): number | null => {
     return age;
 };
 
-export const PatientsView = ({ user, profile, setCurrentView, setSelectedPatientId }: PatientsViewProps) => {
+export const PatientsView = ({ user, profile, setCurrentView, setSelectedPatientId, setPatientHistoryInitialTab }: PatientsViewProps) => {
     const [showAdd, setShowAdd] = useState(false);
     const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -119,12 +120,14 @@ export const PatientsView = ({ user, profile, setCurrentView, setSelectedPatient
 
     const handleViewHistory = (patient: Patient) => {
         setSelectedPatientId(patient.id);
+        setPatientHistoryInitialTab('history');
         setCurrentView('patient-history');
     };
 
     const handleViewTasks = (patient: Patient) => {
-        // For now, same as history - could be separate tab later
+        // Navigate to patient history with tasks tab selected
         setSelectedPatientId(patient.id);
+        setPatientHistoryInitialTab('tasks');
         setCurrentView('patient-history');
     };
 

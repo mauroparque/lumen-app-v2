@@ -99,21 +99,28 @@ export const CalendarView = ({ user, profile }: CalendarViewProps) => {
     // Auto-scroll to current time on mount (only for week view on current week)
     useEffect(() => {
         if (viewMode === 'week' && scrollContainerRef.current && isCurrentWeek) {
-            const now = new Date();
-            const currentHour = now.getHours();
-            const currentMinutes = now.getMinutes();
+            // Small delay to ensure DOM is fully rendered
+            const timeoutId = setTimeout(() => {
+                if (!scrollContainerRef.current) return;
 
-            if (currentHour >= START_HOUR && currentHour <= END_HOUR) {
-                // Calculate scroll position: center the current time in the view
-                const hourOffset = currentHour - START_HOUR;
-                const minuteOffset = currentMinutes / 60;
-                const scrollPosition = (hourOffset + minuteOffset) * getHourHeight() - 150; // -150 to show some context above
+                const now = new Date();
+                const currentHour = now.getHours();
+                const currentMinutes = now.getMinutes();
 
-                scrollContainerRef.current.scrollTo({
-                    top: Math.max(0, scrollPosition),
-                    behavior: 'smooth'
-                });
-            }
+                if (currentHour >= START_HOUR && currentHour <= END_HOUR) {
+                    // Calculate scroll position: center the current time in the view
+                    const hourOffset = currentHour - START_HOUR;
+                    const minuteOffset = currentMinutes / 60;
+                    const scrollPosition = (hourOffset + minuteOffset) * getHourHeight() - 150; // -150 to show some context above
+
+                    scrollContainerRef.current.scrollTo({
+                        top: Math.max(0, scrollPosition),
+                        behavior: 'smooth'
+                    });
+                }
+            }, 100); // 100ms delay to ensure rendering is complete
+
+            return () => clearTimeout(timeoutId);
         }
     }, [viewMode, isCurrentWeek]);
 

@@ -1,32 +1,35 @@
 <!doctype html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#2d8b8b" />
-    <meta name="description" content="Sistema de gestión de consultas de salud mental" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="icon" type="image/png" href="/favicon.ico" />
-    
-    <title>Lumen App</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      // Mock global variables for dev environment
-      window.__firebase_config = JSON.stringify({
-        apiKey: "demo-key",
-        authDomain: "demo.firebaseapp.com",
-        projectId: "demo-project",
-        storageBucket: "demo.appspot.com",
-        messagingSenderId: "123456789",
-        appId: "1:123456789:web:abcdef"
-      });
-      window.__app_id = "dev-app-id";
-    </script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#2d8b8b" />
+  <meta name="description" content="Sistema de gestión de consultas de salud mental" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" href="/favicon.ico" />
+
+  <title>Lumen App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Mock global variables for dev environment
+    window.__firebase_config = JSON.stringify({
+      apiKey: "demo-key",
+      authDomain: "demo.firebaseapp.com",
+      projectId: "demo-project",
+      storageBucket: "demo.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abcdef"
+    });
+    window.__app_id = "dev-app-id";
+  </script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

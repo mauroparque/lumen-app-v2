@@ -40,7 +40,7 @@ export default defineConfig({
             workbox: {
                 // Dynamic cacheId forces SW update on each build (bypasses Cloudflare cache)
                 cacheId: `lumen-app-v2-${new Date().getTime()}`,
-                skipWaiting: true,
+                // skipWaiting removed - user controls update via prompt
                 clientsClaim: true,
                 cleanupOutdatedCaches: true,
                 globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],

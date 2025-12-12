@@ -40,6 +40,8 @@ export default defineConfig({
             workbox: {
                 skipWaiting: true,
                 clientsClaim: true,
+                cleanupOutdatedCaches: true,
+                // Force cache refresh for all app files
                 globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
                 runtimeCaching: [
                     {

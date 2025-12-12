@@ -21,6 +21,7 @@ import { BillingView } from './views/BillingView';
 import { DashboardView } from './views/DashboardView';
 import { PatientHistoryView } from './views/PatientHistoryView';
 import { TasksView } from './views/TasksView';
+import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 
 // Global declaration for initial auth token
 declare global {
@@ -67,6 +68,7 @@ export default function LumenApp() {
             <DataProvider>
                 <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
                     <Toaster position="top-center" richColors />
+                    <PWAUpdatePrompt />
                     <Sidebar
                         user={user}
                         currentView={currentView}

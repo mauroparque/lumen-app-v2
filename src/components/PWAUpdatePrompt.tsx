@@ -1,13 +1,25 @@
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { RefreshCw } from 'lucide-react';
 
+// Check for updates every hour (in milliseconds)
+const UPDATE_CHECK_INTERVAL = 60 * 60 * 1000;
+
 export const PWAUpdatePrompt = () => {
     const {
         needRefresh: [needRefresh, setNeedRefresh],
         updateServiceWorker,
     } = useRegisterSW({
-        onRegistered(r) {
-            console.log('SW Registered: ' + r);
+        onRegisteredSW(swUrl, r) {
+            console.log('SW Registered: ' + swUrl);
+            if (r) {
+                // Check for updates immediately on registration
+                r.update();
+                // Then check periodically
+                setInterval(() => {
+                    console.log('Checking for SW updates...');
+                    r.update();
+                }, UPDATE_CHECK_INTERVAL);
+            }
         },
         onRegisterError(error) {
             console.log('SW registration error', error);

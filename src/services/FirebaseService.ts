@@ -38,10 +38,11 @@ export class FirebaseService implements IDataService {
     }
 
     subscribeToFinance(onUnpaid: (data: Appointment[]) => void, onPayments: (data: Payment[]) => void): () => void {
+        // Query all unpaid appointments, filter cancelled ones in client
+        // (Firestore doesn't support complex OR queries with multiple fields)
         const unpaidQuery = query(
             collection(db, APPOINTMENTS_COLLECTION),
-            where('isPaid', '==', false),
-            where('status', '!=', 'cancelado')
+            where('isPaid', '==', false)
         );
 
         const paymentsQuery = query(
@@ -51,7 +52,10 @@ export class FirebaseService implements IDataService {
         );
 
         const unsubUnpaid = onSnapshot(unpaidQuery, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment));
+            const data = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() } as Appointment))
+                // Filtrar cancelados sin cobro (solo mostrar si NO está cancelado O si tiene chargeOnCancellation)
+                .filter(a => a.status !== 'cancelado' || a.chargeOnCancellation);
             data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             onUnpaid(data);
         }, (error) => console.error("Error fetching unpaid:", error));

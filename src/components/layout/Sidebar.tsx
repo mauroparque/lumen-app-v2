@@ -15,7 +15,9 @@ export const Sidebar = ({ user, currentView, setCurrentView }: SidebarProps) => 
     const { appointments } = useData();
 
     const hasPendingDebts = appointments.some(a => {
-        if (a.isPaid || a.status === 'cancelado') return false;
+        if (a.isPaid) return false;
+        // Cancelados sin cobro no generan deuda
+        if (a.status === 'cancelado' && !a.chargeOnCancellation) return false;
 
         const apptDate = new Date(a.date + 'T00:00:00');
         const now = new Date();

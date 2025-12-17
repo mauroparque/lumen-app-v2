@@ -81,8 +81,12 @@ export const usePatientData = (user: User | null, patientId: string | undefined)
             // Only count debt if:
             // 1. Not paid
             // 2. Date is strictly before today (past)
-            // 3. Status is not cancelled
-            if (!appt.isPaid && appt.date < today && appt.status !== 'cancelado' && appt.price) {
+            // 3. Status is not cancelled (unless chargeOnCancellation is true)
+            if (!appt.isPaid && appt.date < today && appt.price) {
+                // Cancelados sin cobro no generan deuda
+                if (appt.status === 'cancelado' && !appt.chargeOnCancellation) {
+                    return; // skip this appointment
+                }
                 debt += appt.price;
             }
         });

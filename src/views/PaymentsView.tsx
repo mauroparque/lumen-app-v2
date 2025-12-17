@@ -63,15 +63,18 @@ export const PaymentsView = ({ user }: PaymentsViewProps) => {
         if (viewMode === 'overdue') {
             // ALL overdue appointments (1 hour past start time, unpaid), regardless of selected month
             return data.filter(a => {
-                return !a.isPaid && a.status !== 'cancelado' && isOverdue(a);
+                // Cancelados sin cobro no se muestran
+                if (a.status === 'cancelado' && !a.chargeOnCancellation) return false;
+                return !a.isPaid && isOverdue(a);
             }).sort((a, b) => a.date.localeCompare(b.date));
         } else if (viewMode === 'upcoming') {
             // Future/Pending appointments in selected month (NOT overdue)
             return data.filter(a => {
                 const apptDate = new Date(a.date + 'T00:00:00');
                 const inMonth = apptDate >= startOfMonth && apptDate <= endOfMonth;
-                // Must be unpaid, not cancelled, in month, and NOT overdue
-                return !a.isPaid && a.status !== 'cancelado' && inMonth && !isOverdue(a);
+                // Must be unpaid, not cancelled (unless chargeOnCancellation), in month, and NOT overdue
+                if (a.status === 'cancelado' && !a.chargeOnCancellation) return false;
+                return !a.isPaid && inMonth && !isOverdue(a);
             }).sort((a, b) => a.date.localeCompare(b.date));
         } else {
             // History: Paid appointments in selected month

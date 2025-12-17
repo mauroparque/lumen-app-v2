@@ -36,6 +36,9 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
     const [isDeleting, setIsDeleting] = useState(false);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
+    // Estado para el diálogo de cancelación
+    const [showCancelDialog, setShowCancelDialog] = useState(false);
+
     useEffect(() => {
         if (note) {
             setContent(note.content);
@@ -169,17 +172,33 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
         }
     };
 
-    const handleStatusChange = async (newStatus: 'ausente' | 'cancelado') => {
+    const handleStatusChange = async (newStatus: 'ausente' | 'cancelado', chargeOnCancellation?: boolean) => {
         setIsUpdatingStatus(true);
         try {
-            await updateAppointment(appointment.id, { status: newStatus });
-            toast.success(newStatus === 'ausente' ? 'Turno marcado como ausente' : 'Turno cancelado');
+            const updateData: Partial<Pick<Appointment, 'status' | 'chargeOnCancellation'>> = { status: newStatus };
+
+            // Si es cancelación, agregar el campo de cobro
+            if (newStatus === 'cancelado') {
+                updateData.chargeOnCancellation = chargeOnCancellation ?? false;
+            }
+
+            await updateAppointment(appointment.id, updateData);
+
+            if (newStatus === 'ausente') {
+                toast.success('Turno marcado como ausente');
+            } else if (chargeOnCancellation) {
+                toast.success('Turno cancelado (se mantiene el cobro)');
+            } else {
+                toast.success('Turno cancelado (sin cobro)');
+            }
+
             onClose();
         } catch (error) {
             console.error(error);
             toast.error('Error al actualizar el estado');
         } finally {
             setIsUpdatingStatus(false);
+            setShowCancelDialog(false);
         }
     };
 
@@ -189,6 +208,9 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
             case 'ausente':
                 return { label: 'Ausente', color: 'bg-orange-100 text-orange-700', icon: UserX };
             case 'cancelado':
+                if (appointment.chargeOnCancellation) {
+                    return { label: 'Cancelado (con cobro)', color: 'bg-amber-100 text-amber-700', icon: XCircle };
+                }
                 return { label: 'Cancelado', color: 'bg-red-100 text-red-700', icon: XCircle };
             case 'presente':
                 return { label: 'Presente', color: 'bg-green-100 text-green-700', icon: CheckCircle };
@@ -342,7 +364,7 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
                                             Marcar Ausente
                                         </button>
                                         <button
-                                            onClick={() => handleStatusChange('cancelado')}
+                                            onClick={() => setShowCancelDialog(true)}
                                             disabled={isUpdatingStatus}
                                             className="flex-1 py-2 px-3 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 font-medium flex items-center justify-center transition-colors disabled:opacity-50 text-sm"
                                         >
@@ -615,6 +637,52 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
                         {isDeleting && (
                             <div className="mt-4 text-center text-sm text-slate-500 flex items-center justify-center">
                                 <Loader2 size={16} className="animate-spin mr-2" /> Eliminando...
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Diálogo de cancelación con opción de cobro */}
+            {showCancelDialog && (
+                <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-200">
+                        <h3 className="text-lg font-bold text-slate-900 mb-2">¿Cómo deseas cancelar el turno?</h3>
+                        <p className="text-sm text-slate-500 mb-6">
+                            Elige si deseas mantener el cobro de los honorarios o cancelar sin cobro.
+                        </p>
+
+                        <div className="space-y-3">
+                            <button
+                                onClick={() => handleStatusChange('cancelado', false)}
+                                disabled={isUpdatingStatus}
+                                className="w-full py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition-colors disabled:opacity-50 text-left"
+                            >
+                                <div className="font-semibold">Cancelar sin cobro</div>
+                                <div className="text-xs text-slate-500">El turno se cancela y no se genera deuda</div>
+                            </button>
+
+                            <button
+                                onClick={() => handleStatusChange('cancelado', true)}
+                                disabled={isUpdatingStatus}
+                                className="w-full py-3 px-4 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg font-medium transition-colors disabled:opacity-50 text-left border border-amber-200"
+                            >
+                                <div className="font-semibold">Cancelar con cobro</div>
+                                <div className="text-xs text-amber-600">El turno se cancela pero se mantiene el cobro de honorarios</div>
+                            </button>
+                        </div>
+
+                        <button
+                            onClick={() => setShowCancelDialog(false)}
+                            disabled={isUpdatingStatus}
+                            className="w-full mt-4 py-2 text-slate-500 hover:text-slate-700 font-medium disabled:opacity-50"
+                        >
+                            Volver
+                        </button>
+
+                        {isUpdatingStatus && (
+                            <div className="mt-4 text-center text-sm text-slate-500 flex items-center justify-center">
+                                <Loader2 size={16} className="animate-spin mr-2" /> Actualizando...
                             </div>
                         )}
                     </div>

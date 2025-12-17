@@ -50,6 +50,7 @@ export interface Appointment {
     type: 'presencial' | 'online';
     meetLink?: string;
     status: 'programado' | 'completado' | 'cancelado' | 'ausente' | 'presente';
+    chargeOnCancellation?: boolean; // Si es true, el turno cancelado sigue generando cobro
     isPaid?: boolean;
     price?: number;
     professional?: string;

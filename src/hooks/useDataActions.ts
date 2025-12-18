@@ -1,5 +1,5 @@
 import { useService } from '../context/ServiceContext';
-import { PatientInput, AppointmentInput, PaymentInput, Patient, Appointment, PatientBillingData } from '../types';
+import { PatientInput, AppointmentInput, PaymentInput, Patient, Appointment, Payment, PatientBillingData } from '../types';
 
 export const useDataActions = () => {
     const service = useService();
@@ -58,6 +58,10 @@ export const useDataActions = () => {
         return ensureService().deleteRecurringFromDate(recurrenceId, fromDate);
     };
 
+    const updatePayment = async (id: string, data: Partial<Payment>) => {
+        return ensureService().updatePayment(id, data);
+    };
+
     return {
         addPatient,
         addAppointment,
@@ -65,6 +69,7 @@ export const useDataActions = () => {
         updateAppointment,
         updatePatient,
         addPayment,
+        updatePayment,
         deleteItem,
         requestBatchInvoice,
         deleteRecurringSeries,

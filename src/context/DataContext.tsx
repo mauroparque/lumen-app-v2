@@ -1,16 +1,18 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { Patient, Appointment } from '../types';
+import { Patient, Appointment, Payment } from '../types';
 import { useService } from './ServiceContext';
 
 interface DataContextType {
     patients: Patient[];
     appointments: Appointment[];
+    payments: Payment[];
     loading: boolean;
 }
 
 const DataContext = createContext<DataContextType>({
     patients: [],
     appointments: [],
+    payments: [],
     loading: true,
 });
 
@@ -20,6 +22,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     const service = useService();
     const [patients, setPatients] = useState<Patient[]>([]);
     const [appointments, setAppointments] = useState<Appointment[]>([]);
+    const [payments, setPayments] = useState<Payment[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -44,9 +47,18 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
             setLoading(false); // Assume initial load implies mostly both are ready or close enough
         });
 
+        // 3. Subscribe to Finance (includes payments)
+        const unsubFinance = service.subscribeToFinance(
+            () => { }, // We don't need unpaid appointments here
+            (paymentData) => {
+                setPayments(paymentData);
+            }
+        );
+
         return () => {
             unsubPatients();
             unsubAppointments();
+            unsubFinance();
         };
     }, [service]);
 
@@ -54,8 +66,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     const value = useMemo(() => ({
         patients,
         appointments,
+        payments,
         loading
-    }), [patients, appointments, loading]);
+    }), [patients, appointments, payments, loading]);
 
     return (
         <DataContext.Provider value={value}>
@@ -63,4 +76,3 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         </DataContext.Provider>
     );
 };
-

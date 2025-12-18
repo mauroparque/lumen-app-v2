@@ -3,25 +3,40 @@ import { User } from 'firebase/auth';
 import { useData } from '../context/DataContext';
 import { usePatients } from '../hooks/usePatients';
 import { usePsiquePayments } from '../hooks/usePsiquePayments';
-import { Search, CheckCircle, AlertCircle, Clock, DollarSign, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Building2, Loader2 } from 'lucide-react';
+import { Search, CheckCircle, AlertCircle, Clock, DollarSign, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Building2, Loader2, Pencil } from 'lucide-react';
 import { PaymentModal } from '../components/modals/PaymentModal';
 import { toast } from 'sonner';
+import { Appointment, Payment } from '../types';
 
 interface PaymentsViewProps {
     user: User;
 }
 
+const PSIQUE_RATE = 0.25;
+
 export const PaymentsView = ({ user }: PaymentsViewProps) => {
-    const { appointments, loading } = useData();
+    const { appointments, payments, loading } = useData();
     const { patients } = usePatients(user);
     const [searchTerm, setSearchTerm] = useState('');
     const [viewMode, setViewMode] = useState<'overdue' | 'upcoming' | 'history' | 'psique'>('overdue');
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-    const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+    const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+    const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+    const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+    const [selectedIsPsique, setSelectedIsPsique] = useState(false);
 
     // Psique payments hook
     const { monthData: psiqueData, loading: psiqueLoading, markAsPaid } = usePsiquePayments(appointments, patients, selectedDate);
+
+    // Create a map of patientId -> isPsique for quick lookup
+    const psiquePatientIds = useMemo(() => {
+        return new Set(
+            patients
+                .filter(p => p.patientSource === 'psique')
+                .map(p => p.id)
+        );
+    }, [patients]);
 
     // Month Selector helpers
     const currentMonthLabel = selectedDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
@@ -49,7 +64,7 @@ export const PaymentsView = ({ user }: PaymentsViewProps) => {
         const now = new Date();
 
         // Helper to check if an appointment is overdue (1 hour after start time)
-        const isOverdue = (appointment: any) => {
+        const isOverdue = (appointment: Appointment) => {
             const apptDateTime = new Date(appointment.date + 'T' + (appointment.time || '00:00') + ':00');
             // Add 1 hour to appointment time
             apptDateTime.setHours(apptDateTime.getHours() + 1);
@@ -85,7 +100,25 @@ export const PaymentsView = ({ user }: PaymentsViewProps) => {
         }
     }, [appointments, loading, searchTerm, viewMode, selectedDate]);
 
-    const totalAmount = filteredData.reduce((acc, curr) => acc + (curr.price || 0), 0);
+    // Calculate gross and net totals
+    const { totalGross, totalNet } = useMemo(() => {
+        let gross = 0;
+        let psiqueDiscount = 0;
+
+        filteredData.forEach(item => {
+            const price = item.price || 0;
+            gross += price;
+            // Only apply discount if patient is from Psique AND appointment is not excluded
+            if (psiquePatientIds.has(item.patientId) && !item.excludeFromPsique) {
+                psiqueDiscount += price * PSIQUE_RATE;
+            }
+        });
+
+        return {
+            totalGross: gross,
+            totalNet: gross - psiqueDiscount
+        };
+    }, [filteredData, psiquePatientIds]);
 
     // Calculate monthly gross income (all paid appointments in selected month)
     const monthlyGrossIncome = useMemo(() => {
@@ -105,9 +138,42 @@ export const PaymentsView = ({ user }: PaymentsViewProps) => {
     // Net income = gross - psique expense
     const monthlyNetIncome = monthlyGrossIncome - psiqueData.totalAmount;
 
-    const handleOpenPayment = (appt: any) => {
+    const handleOpenPayment = (appt: Appointment) => {
         setSelectedAppointment(appt);
+        setSelectedPayment(null);
+        // Only set isPsique if patient is from Psique AND appointment is not excluded
+        setSelectedIsPsique(psiquePatientIds.has(appt.patientId) && !appt.excludeFromPsique);
+        setModalMode('create');
         setPaymentModalOpen(true);
+    };
+
+    const handleEditPayment = (appt: Appointment) => {
+        // Find the payment associated with this appointment
+        const payment = payments?.find(p => p.appointmentId === appt.id);
+        if (payment) {
+            setSelectedAppointment(appt);
+            setSelectedPayment(payment);
+            // Only set isPsique if patient is from Psique AND appointment is not excluded
+            setSelectedIsPsique(psiquePatientIds.has(appt.patientId) && !appt.excludeFromPsique);
+            setModalMode('edit');
+            setPaymentModalOpen(true);
+        } else {
+            toast.error('No se encontró el pago asociado');
+        }
+    };
+
+    // Helper to check if psique discount applies to an appointment
+    const hasPsiqueDiscount = (appt: Appointment) => {
+        return psiquePatientIds.has(appt.patientId) && !appt.excludeFromPsique;
+    };
+
+    // Helper to get net amount for display
+    const getNetAmount = (appt: Appointment) => {
+        const price = appt.price || 0;
+        if (hasPsiqueDiscount(appt)) {
+            return price - (price * PSIQUE_RATE);
+        }
+        return price;
     };
 
     return (
@@ -266,13 +332,20 @@ export const PaymentsView = ({ user }: PaymentsViewProps) => {
                                 viewMode === 'upcoming' ? 'Total a Cobrar (Mes)' :
                                     'Total Cobrado (Mes)'}
                         </p>
-                        <h2 className={`text-3xl font-bold flex items-center 
-                            ${viewMode === 'overdue' ? 'text-red-700' :
-                                viewMode === 'upcoming' ? 'text-amber-700' :
-                                    'text-green-700'}`}>
-                            <DollarSign size={24} className="mr-1" />
-                            {totalAmount.toLocaleString()}
-                        </h2>
+                        <div className="flex items-baseline gap-4">
+                            <h2 className={`text-3xl font-bold flex items-center 
+                                ${viewMode === 'overdue' ? 'text-red-700' :
+                                    viewMode === 'upcoming' ? 'text-amber-700' :
+                                        'text-green-700'}`}>
+                                <DollarSign size={24} className="mr-1" />
+                                {totalNet.toLocaleString()}
+                            </h2>
+                            {totalGross !== totalNet && (
+                                <span className="text-sm text-slate-500">
+                                    (Bruto: ${totalGross.toLocaleString()})
+                                </span>
+                            )}
+                        </div>
                     </div>
                     <div className={`text-right text-sm font-medium opacity-80
                          ${viewMode === 'overdue' ? 'text-red-600' :
@@ -376,25 +449,58 @@ export const PaymentsView = ({ user }: PaymentsViewProps) => {
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {filteredData.map(item => {
+                                    const isPsiquePatient = psiquePatientIds.has(item.patientId);
+                                    const hasDiscount = hasPsiqueDiscount(item);
+                                    const price = item.price || 0;
+                                    const netAmount = getNetAmount(item);
+
                                     return (
                                         <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                                             <td className="p-4 pl-6 font-medium text-slate-700 whitespace-nowrap">
                                                 {new Date(item.date + 'T00:00:00').toLocaleDateString()}
                                             </td>
-                                            <td className="p-4 font-bold text-slate-800">
-                                                {item.patientName}
+                                            <td className="p-4">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-slate-800">{item.patientName}</span>
+                                                    {isPsiquePatient && (
+                                                        <span
+                                                            className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${hasDiscount ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-500 line-through'}`}
+                                                            title={hasDiscount ? "Paciente Psique - 25% descuento aplicado" : "Paciente Psique - Sin descuento (excluido)"}
+                                                        >
+                                                            <Building2 size={10} className="mr-1" /> P
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="p-4 text-slate-500 hidden sm:table-cell">
                                                 {item.consultationType || 'Consulta'}
                                             </td>
-                                            <td className="p-4 text-right font-bold text-slate-700 whitespace-nowrap">
-                                                ${item.price}
+                                            <td className="p-4 text-right whitespace-nowrap">
+                                                {hasDiscount ? (
+                                                    <div className="flex flex-col items-end">
+                                                        <span className="font-bold text-slate-700">${netAmount.toLocaleString()}</span>
+                                                        <span className="text-xs text-purple-500" title={`Bruto: $${price.toLocaleString()} - Psique: $${(price * PSIQUE_RATE).toLocaleString()}`}>
+                                                            (bruto ${price.toLocaleString()})
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="font-bold text-slate-700">${price.toLocaleString()}</span>
+                                                )}
                                             </td>
                                             <td className="p-4 pr-6 text-center">
                                                 {item.isPaid ? (
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                        Cobrado
-                                                    </span>
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                            Cobrado
+                                                        </span>
+                                                        <button
+                                                            onClick={() => handleEditPayment(item)}
+                                                            className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
+                                                            title="Editar pago"
+                                                        >
+                                                            <Pencil size={14} />
+                                                        </button>
+                                                    </div>
                                                 ) : (
                                                     <button
                                                         onClick={() => handleOpenPayment(item)}
@@ -413,9 +519,12 @@ export const PaymentsView = ({ user }: PaymentsViewProps) => {
                 )}
             </div>
 
-            {paymentModalOpen && selectedAppointment && (
+            {paymentModalOpen && (selectedAppointment || selectedPayment) && (
                 <PaymentModal
-                    appointment={selectedAppointment}
+                    appointment={selectedAppointment || undefined}
+                    existingPayment={selectedPayment || undefined}
+                    isPsiquePatient={selectedIsPsique}
+                    mode={modalMode}
                     onClose={() => setPaymentModalOpen(false)}
                 />
             )}

@@ -193,6 +193,11 @@ export class FirebaseService implements IDataService {
         await deleteDoc(docRef);
     }
 
+    async updatePayment(id: string, data: Partial<Payment>): Promise<void> {
+        const docRef = doc(db, PAYMENTS_COLLECTION, id);
+        await updateDoc(docRef, data);
+    }
+
     async requestBatchInvoice(appointments: Appointment[], patientData: PatientBillingData): Promise<string> {
         const queueRef = collection(db, BILLING_QUEUE_COLLECTION);
 

@@ -20,6 +20,7 @@ export interface IDataService {
 
     addPayment(payment: PaymentInput, appointmentId?: string): Promise<string>;
     deletePayment(id: string): Promise<void>;
+    updatePayment(id: string, data: Partial<Payment>): Promise<void>;
 
     // Facturación
     requestBatchInvoice(appointments: Appointment[], patientData: PatientBillingData): Promise<string>;

@@ -3,8 +3,10 @@ import { User } from 'firebase/auth';
 import { useData } from '../context/DataContext';
 import { usePatients } from '../hooks/usePatients';
 import { usePsiquePayments } from '../hooks/usePsiquePayments';
-import { Search, CheckCircle, AlertCircle, Clock, DollarSign, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Building2, Loader2, Pencil } from 'lucide-react';
+import { useAgendaStats } from '../hooks/useAgendaStats';
+import { Search, CheckCircle, AlertCircle, Clock, DollarSign, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Building2, Loader2, Pencil, TrendingUp } from 'lucide-react';
 import { PaymentModal } from '../components/modals/PaymentModal';
+import { IncomeProjection } from '../components/payments/IncomeProjection';
 import { toast } from 'sonner';
 import { Appointment, Payment } from '../types';
 
@@ -18,7 +20,7 @@ export const PaymentsView = ({ user }: PaymentsViewProps) => {
     const { appointments, payments, loading } = useData();
     const { patients } = usePatients(user);
     const [searchTerm, setSearchTerm] = useState('');
-    const [viewMode, setViewMode] = useState<'overdue' | 'upcoming' | 'history' | 'psique'>('overdue');
+    const [viewMode, setViewMode] = useState<'overdue' | 'upcoming' | 'history' | 'psique' | 'projection'>('overdue');
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
     const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -28,6 +30,9 @@ export const PaymentsView = ({ user }: PaymentsViewProps) => {
 
     // Psique payments hook
     const { monthData: psiqueData, loading: psiqueLoading, markAsPaid } = usePsiquePayments(appointments, patients, selectedDate);
+
+    // Agenda stats for projection
+    const agendaStats = useAgendaStats(appointments, patients);
 
     // Create a map of patientId -> isPsique for quick lookup
     const psiquePatientIds = useMemo(() => {
@@ -254,10 +259,16 @@ export const PaymentsView = ({ user }: PaymentsViewProps) => {
                     >
                         <Building2 size={16} className="mr-2" /> Psique
                     </button>
+                    <button
+                        onClick={() => setViewMode('projection')}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center whitespace-nowrap ${viewMode === 'projection' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        <TrendingUp size={16} className="mr-2" /> Proyección
+                    </button>
                 </div>
 
                 {/* Date Selector (Only relevant for Upcoming & History usually, but kept always visible for simplicity or specific behavior) */}
-                {(viewMode !== 'overdue') && (
+                {(viewMode !== 'overdue' && viewMode !== 'projection') && (
                     <div className="flex items-center bg-white border border-slate-200 rounded-xl px-2 py-1 shadow-sm">
                         <button onClick={() => changeMonth(-1)} className="p-1 hover:bg-slate-100 rounded-lg text-slate-500">
                             <ChevronLeft size={20} />
@@ -272,8 +283,10 @@ export const PaymentsView = ({ user }: PaymentsViewProps) => {
                 )}
             </div>
 
-            {/* Summary Card */}
-            {viewMode === 'psique' ? (
+            {/* Projection View */}
+            {viewMode === 'projection' ? (
+                <IncomeProjection stats={agendaStats} patients={patients} />
+            ) : viewMode === 'psique' ? (
                 <div className={`border p-6 rounded-2xl shadow-sm mb-6 ${psiqueData.isPaid ? 'bg-green-50 border-green-200' : 'bg-purple-50 border-purple-200'}`}>
                     <div className="flex items-center justify-between">
                         <div>

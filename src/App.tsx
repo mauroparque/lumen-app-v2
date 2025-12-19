@@ -21,6 +21,7 @@ import { BillingView } from './views/BillingView';
 import { DashboardView } from './views/DashboardView';
 import { PatientHistoryView } from './views/PatientHistoryView';
 import { TasksView } from './views/TasksView';
+import { StatisticsView } from './views/StatisticsView';
 import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 
 // Global declaration for initial auth token
@@ -121,6 +122,9 @@ export default function LumenApp() {
                         )}
                         {currentView === 'tasks' && (
                             <TasksView user={user} profile={profile} />
+                        )}
+                        {currentView === 'statistics' && (
+                            <StatisticsView user={user} />
                         )}
                     </main>
                 </div>

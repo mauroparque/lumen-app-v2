@@ -1,4 +1,4 @@
-import { Home, Calendar as CalendarIcon, Users, DollarSign, FileText, LogOut, ListTodo } from 'lucide-react';
+import { Home, Calendar as CalendarIcon, Users, DollarSign, FileText, LogOut, ListTodo, BarChart3 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { User } from 'firebase/auth';
@@ -45,6 +45,7 @@ export const Sidebar = ({ user, currentView, setCurrentView }: SidebarProps) => 
                         )}
                     </div>
                     <SidebarItem icon={FileText} label="Facturación" active={currentView === 'billing'} onClick={() => setCurrentView('billing')} />
+                    <SidebarItem icon={BarChart3} label="Estadísticas" active={currentView === 'statistics'} onClick={() => setCurrentView('statistics')} />
                 </div>
             </nav>
             <div className="p-4 border-t text-sm">

@@ -4,7 +4,7 @@ import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { auth, db, appId } from '../lib/firebase';
 import { Turnstile } from '@marsidev/react-turnstile';
 
-const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA';
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 
 export const AuthScreen = () => {
     const [email, setEmail] = useState('');
@@ -121,8 +121,8 @@ export const AuthScreen = () => {
                         type="submit"
                         disabled={!turnstileToken || isLoading}
                         className={`w-full py-2 rounded font-medium transition-colors ${turnstileToken && !isLoading
-                                ? 'bg-teal-600 text-white hover:bg-teal-700'
-                                : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                            ? 'bg-teal-600 text-white hover:bg-teal-700'
+                            : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                             }`}
                     >
                         {isLoading ? 'Ingresando...' : 'Ingresar'}

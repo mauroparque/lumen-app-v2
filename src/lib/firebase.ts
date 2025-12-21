@@ -7,7 +7,8 @@ import { getStorage } from 'firebase/storage';
 const requiredEnvVars = [
     'VITE_FIREBASE_API_KEY',
     'VITE_FIREBASE_AUTH_DOMAIN',
-    'VITE_FIREBASE_PROJECT_ID'
+    'VITE_FIREBASE_PROJECT_ID',
+    'VITE_APP_INTERNAL_ID'
 ];
 
 requiredEnvVars.forEach(key => {
@@ -34,5 +35,5 @@ export const storage = getStorage(app);
 // Definimos un ID fijo para producción. 
 // Esto reemplaza al dinámico __app_id del entorno de prueba.
 // IMPORTANTE: Mantén este string constante para no perder referencia a los datos.
-export const appId = 'lumen-production';
+export const appId = import.meta.env.VITE_APP_INTERNAL_ID;
 export const CLINIC_ID = 'lumen-general';

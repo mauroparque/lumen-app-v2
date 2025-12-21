@@ -23,6 +23,7 @@ import { PatientHistoryView } from './views/PatientHistoryView';
 import { TasksView } from './views/TasksView';
 import { StatisticsView } from './views/StatisticsView';
 import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
+import { EnvironmentBanner } from './components/EnvironmentBanner';
 
 // Global declaration for initial auth token
 declare global {
@@ -50,14 +51,16 @@ export default function LumenApp() {
         return onAuthStateChanged(auth, setUser);
     }, []);
 
-    // PWA Update prompt - always render regardless of auth state
+    // PWA Update prompt and environment banner - always render regardless of auth state
     const pwaPrompt = <PWAUpdatePrompt />;
+    const envBanner = <EnvironmentBanner />;
 
-    if (!user) return <><AuthScreen />{pwaPrompt}</>;
+    if (!user) return <>{envBanner}<AuthScreen />{pwaPrompt}</>;
 
     if (loadingProfile) {
         return (
             <>
+                {envBanner}
                 <div className="h-screen flex items-center justify-center bg-slate-50">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
                 </div>
@@ -67,12 +70,13 @@ export default function LumenApp() {
     }
 
     if (!profile) {
-        return <><ProfileModal onSubmit={createProfile} />{pwaPrompt}</>;
+        return <>{envBanner}<ProfileModal onSubmit={createProfile} />{pwaPrompt}</>;
     }
 
     return (
         <ServiceProvider user={user}>
             <DataProvider>
+                {envBanner}
                 <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
                     <Toaster position="top-center" richColors />
                     {pwaPrompt}

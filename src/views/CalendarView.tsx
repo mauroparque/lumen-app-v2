@@ -75,7 +75,6 @@ export const CalendarView = ({ user, profile }: CalendarViewProps) => {
 
     // Fetch appointments for the visible range
     const { appointments } = useCalendarAppointments(
-        user,
         toLocalDateString(startOfRange),
         toLocalDateString(endOfRange)
     );

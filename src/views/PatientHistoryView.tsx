@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { User } from 'firebase/auth';
-import { ArrowLeft, FileText, ListTodo, Calendar, Phone, Mail, MessageCircle, Baby, Plus, Square, CheckSquare, Trash2, ChevronDown, ChevronUp, Paperclip } from 'lucide-react';
+import { ArrowLeft, FileText, ListTodo, Calendar, Phone, Mail, MessageCircle, Baby, Plus, Square, CheckSquare, ChevronDown, ChevronUp, Paperclip } from 'lucide-react';
 import { View, ClinicalNote } from '../types';
 import { usePatients } from '../hooks/usePatients';
 import { useData } from '../context/DataContext';

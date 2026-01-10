@@ -6,8 +6,8 @@ import { usePatients } from '../hooks/usePatients';
 import { usePendingTasks } from '../hooks/usePendingTasks';
 import { usePsiquePayments } from '../hooks/usePsiquePayments';
 import {
-    Calendar, Users, DollarSign, Clock, AlertCircle,
-    TrendingUp, ChevronRight, CheckCircle, Video, MapPin, ListTodo, Square, CheckSquare
+    Calendar, Users, Clock, AlertCircle,
+    TrendingUp, ChevronRight, CheckCircle, Video, MapPin, ListTodo, Square
 } from 'lucide-react';
 import { toast } from 'sonner';
 

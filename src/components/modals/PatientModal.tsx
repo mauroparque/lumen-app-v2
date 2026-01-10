@@ -5,7 +5,7 @@ import { useDataActions } from '../../hooks/useDataActions';
 import { usePatients } from '../../hooks/usePatients';
 import { toast } from 'sonner';
 import { StaffProfile, ContactRelationship, Patient } from '../../types';
-import { ChevronDown, ChevronUp, Baby, User as UserIcon } from 'lucide-react';
+import { ChevronDown, ChevronUp, Baby } from 'lucide-react';
 
 interface PatientModalProps {
     onClose: () => void;
@@ -124,7 +124,7 @@ export const PatientModal = ({ onClose, user, profile, existingPatient }: Patien
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const patientData: Record<string, any> = {
+            const patientData = {
                 firstName: form.firstName,
                 lastName: form.lastName,
                 name: `${form.firstName} ${form.lastName}`.trim(),
@@ -136,28 +136,20 @@ export const PatientModal = ({ onClose, user, profile, existingPatient }: Patien
                 professional: form.professional || '',
                 isActive: form.isActive,
                 patientSource: form.patientSource,
+                fee: form.fee ? parseFloat(form.fee) : undefined,
+                birthDate: form.birthDate || undefined,
+                admissionDate: form.admissionDate || undefined,
+                // Discharge info
+                dischargeType: !form.isActive && form.dischargeType ? form.dischargeType : undefined,
+                dischargeDate: !form.isActive && form.dischargeDate ? form.dischargeDate : undefined,
+                // Contact info
+                contactName: form.contactName || undefined,
+                contactPhone: form.contactPhone || undefined,
+                contactRelationship: form.contactRelationship || undefined,
+                contactRelationshipOther: form.contactRelationship === 'otro' && form.contactRelationshipOther
+                    ? form.contactRelationshipOther
+                    : undefined,
             };
-
-            // Only add optional fields if they have values
-            if (form.fee) patientData.fee = parseFloat(form.fee);
-            if (form.birthDate) patientData.birthDate = form.birthDate;
-            if (form.admissionDate) patientData.admissionDate = form.admissionDate;
-
-            // Discharge info only if inactive
-            if (!form.isActive) {
-                if (form.dischargeType) patientData.dischargeType = form.dischargeType;
-                if (form.dischargeDate) patientData.dischargeDate = form.dischargeDate;
-            }
-
-            // Contact info
-            if (form.contactName) patientData.contactName = form.contactName;
-            if (form.contactPhone) patientData.contactPhone = form.contactPhone;
-            if (form.contactRelationship) {
-                patientData.contactRelationship = form.contactRelationship;
-                if (form.contactRelationship === 'otro' && form.contactRelationshipOther) {
-                    patientData.contactRelationshipOther = form.contactRelationshipOther;
-                }
-            }
 
             if (existingPatient) {
                 await updatePatient(existingPatient.id, patientData);

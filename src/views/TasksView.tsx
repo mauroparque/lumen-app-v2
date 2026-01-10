@@ -351,7 +351,7 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
                         ].map(opt => (
                             <button
                                 key={opt.value}
-                                onClick={() => setFilterDate(opt.value as any)}
+                                onClick={() => setFilterDate(opt.value as 'all' | 'today' | 'week' | 'overdue')}
                                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${filterDate === opt.value
                                     ? 'bg-white text-slate-700 shadow-sm'
                                     : 'text-slate-500 hover:text-slate-700'

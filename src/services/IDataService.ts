@@ -2,9 +2,9 @@ import { Patient, Appointment, Payment, PatientInput, AppointmentInput, PaymentI
 
 export interface IDataService {
     // Lectura (Suscripciones en tiempo real)
-    subscribeToPatients(onData: (data: Patient[]) => void): () => void;
+    subscribeToPatients(onData: (data: Patient[]) => void, professionalName?: string): () => void;
     subscribeToAppointments(start: string, end: string, onData: (data: Appointment[]) => void): () => void;
-    subscribeToFinance(onUnpaid: (data: Appointment[]) => void, onPayments: (data: Payment[]) => void): () => void;
+    subscribeToFinance(onUnpaid: (data: Appointment[]) => void, onPayments: (data: Payment[]) => void, professionalName?: string): () => void;
 
     // Escritura (Promesas)
     addPatient(patient: PatientInput): Promise<string>;

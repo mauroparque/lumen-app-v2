@@ -6,13 +6,20 @@ import { Patient, Appointment, Payment, PatientInput, AppointmentInput, PaymentI
 
 export class FirebaseService implements IDataService {
     private uid: string;
+    private professionalName: string | null;
 
-    constructor(uid: string) {
+    constructor(uid: string, professionalName?: string) {
         this.uid = uid;
+        this.professionalName = professionalName || null;
     }
 
-    subscribeToPatients(onData: (data: Patient[]) => void): () => void {
-        const q = query(collection(db, PATIENTS_COLLECTION));
+    subscribeToPatients(onData: (data: Patient[]) => void, professionalNameOverride?: string): () => void {
+        const filterName = professionalNameOverride ?? this.professionalName;
+
+        // If we have a professional name, filter by it
+        const q = filterName
+            ? query(collection(db, PATIENTS_COLLECTION), where('professional', '==', filterName))
+            : query(collection(db, PATIENTS_COLLECTION));
 
         return onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Patient));
@@ -37,13 +44,21 @@ export class FirebaseService implements IDataService {
         });
     }
 
-    subscribeToFinance(onUnpaid: (data: Appointment[]) => void, onPayments: (data: Payment[]) => void): () => void {
-        // Query all unpaid appointments, filter cancelled ones in client
-        // (Firestore doesn't support complex OR queries with multiple fields)
-        const unpaidQuery = query(
-            collection(db, APPOINTMENTS_COLLECTION),
-            where('isPaid', '==', false)
-        );
+    subscribeToFinance(onUnpaid: (data: Appointment[]) => void, onPayments: (data: Payment[]) => void, professionalNameOverride?: string): () => void {
+        const filterName = professionalNameOverride ?? this.professionalName;
+
+        // Query unpaid appointments, optionally filtered by professional
+        // Note: Firestore requires composite index for (isPaid, professional) - will be created automatically on first run
+        const unpaidQuery = filterName
+            ? query(
+                collection(db, APPOINTMENTS_COLLECTION),
+                where('isPaid', '==', false),
+                where('professional', '==', filterName)
+            )
+            : query(
+                collection(db, APPOINTMENTS_COLLECTION),
+                where('isPaid', '==', false)
+            );
 
         const paymentsQuery = query(
             collection(db, PAYMENTS_COLLECTION),
@@ -61,7 +76,10 @@ export class FirebaseService implements IDataService {
         }, (error) => console.error("Error fetching unpaid:", error));
 
         const unsubPayments = onSnapshot(paymentsQuery, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
+            let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
+            // Filter payments by professional if specified (using patientId to match with filtered patients)
+            // Note: Payments don't have a professional field directly, so we filter them when displaying
+            // The payments displayed should be filtered at the view level based on the appointments they're linked to
             onPayments(data);
         }, (error) => console.error("Error fetching payments:", error));
 

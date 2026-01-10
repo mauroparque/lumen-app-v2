@@ -20,7 +20,10 @@ interface DashboardViewProps {
 export const DashboardView = ({ user, profile, onNavigate }: DashboardViewProps) => {
     const { appointments, loading } = useData();
     const { patients } = usePatients(user);
-    const { pendingTasks, completeTask } = usePendingTasks(appointments);
+
+    // Create set of patient IDs for filtering tasks
+    const myPatientIds = useMemo(() => new Set(patients.map(p => p.id)), [patients]);
+    const { pendingTasks, completeTask } = usePendingTasks(appointments, myPatientIds);
 
     // Psique payments for current month
     const currentMonth = useMemo(() => new Date(), []);

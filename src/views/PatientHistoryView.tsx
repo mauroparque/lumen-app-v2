@@ -42,7 +42,11 @@ export const PatientHistoryView = ({ user, profile, patientId, setCurrentView, i
     const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
     const { patients } = usePatients(user);
     const { appointments } = useData();
-    const { pendingTasks, completeTask } = usePendingTasks(appointments);
+
+    // Create set with just this patient's ID for task filtering
+    const myPatientIds = useMemo(() => patientId ? new Set([patientId]) : new Set<string>(), [patientId]);
+    const { pendingTasks, completeTask } = usePendingTasks(appointments, myPatientIds);
+
     const { usePatientNotes } = useClinicalNotes(user);
     const { notes: patientNotes, loadingNotes } = usePatientNotes(patientId);
 

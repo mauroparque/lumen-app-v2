@@ -27,7 +27,11 @@ interface TaskFormData {
 export const TasksView = ({ user, profile }: TasksViewProps) => {
     const { patients, loading: loadingPatients } = usePatients(user);
     const { appointments } = useData();
-    const { pendingTasks, loading: loadingTasks, completeTask } = usePendingTasks(appointments);
+
+    // Create set of patient IDs for filtering tasks
+    const myPatientIds = useMemo(() => new Set(patients.map(p => p.id)), [patients]);
+
+    const { pendingTasks, loading: loadingTasks, completeTask } = usePendingTasks(appointments, myPatientIds);
 
     // Filters
     const [searchTerm, setSearchTerm] = useState('');

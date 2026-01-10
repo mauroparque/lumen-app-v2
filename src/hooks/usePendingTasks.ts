@@ -20,7 +20,10 @@ export interface PendingTask {
     appointmentDate?: string;
 }
 
-export const usePendingTasks = (appointments: Appointment[] = []) => {
+export const usePendingTasks = (
+    appointments: Appointment[] = [],
+    myPatientIds?: Set<string>  // NEW: filter by patient IDs belonging to current professional
+) => {
     const [pendingTasks, setPendingTasks] = useState<PendingTask[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -53,6 +56,11 @@ export const usePendingTasks = (appointments: Appointment[] = []) => {
 
             snapshot.docs.forEach(docSnap => {
                 const data = docSnap.data() as ClinicalNote;
+
+                // Skip notes for patients not belonging to current professional
+                if (myPatientIds && !myPatientIds.has(data.patientId)) {
+                    return;
+                }
 
                 // Check if note has tasks with incomplete items
                 if (data.tasks && Array.isArray(data.tasks)) {
@@ -93,9 +101,7 @@ export const usePendingTasks = (appointments: Appointment[] = []) => {
         });
 
         return () => unsubscribe();
-    }, [appointments]);
+    }, [appointments, myPatientIds]);
 
     return { pendingTasks, loading, completeTask };
 };
-
-

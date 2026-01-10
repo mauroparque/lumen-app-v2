@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { collection, doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, setDoc, onSnapshot, query, where } from 'firebase/firestore';
 import { db, CLINIC_ID, appId } from '../lib/firebase';
 import { Appointment, Patient, PsiquePayment } from '../types';
 
@@ -26,7 +26,8 @@ const PSIQUE_PAYMENTS_COLLECTION = `artifacts/${appId}/clinics/${CLINIC_ID}/psiq
 export const usePsiquePayments = (
     appointments: Appointment[],
     patients: Patient[],
-    selectedMonth: Date
+    selectedMonth: Date,
+    professionalName?: string  // NEW: filter by professional
 ) => {
     const [psiquePayments, setPsiquePayments] = useState<Record<string, PsiquePayment>>({});
     const [loading, setLoading] = useState(true);
@@ -39,6 +40,16 @@ export const usePsiquePayments = (
                 .map(p => p.id)
         );
     }, [patients]);
+
+    // Generate document key including professional name for isolation
+    const getDocKey = (month: string, professional?: string) => {
+        if (professional) {
+            // Sanitize professional name for use as document ID part
+            const safeName = professional.replace(/[\/\.#$\[\]]/g, '_');
+            return `${month}_${safeName}`;
+        }
+        return month;
+    };
 
     // Calculate monthly data
     const monthData = useMemo((): PsiqueMonthData => {
@@ -78,8 +89,9 @@ export const usePsiquePayments = (
 
         const totalAmount = patientBreakdown.reduce((sum, p) => sum + p.psiqueAmount, 0);
 
-        // Get payment status from Firestore data
-        const paymentRecord = psiquePayments[monthStr];
+        // Get payment status from Firestore data (using professional-specific key)
+        const docKey = getDocKey(monthStr, professionalName);
+        const paymentRecord = psiquePayments[docKey];
 
         return {
             month: monthStr,
@@ -88,15 +100,20 @@ export const usePsiquePayments = (
             isPaid: paymentRecord?.isPaid || false,
             paidDate: paymentRecord?.paidDate
         };
-    }, [appointments, psiquePatientIds, selectedMonth, psiquePayments]);
+    }, [appointments, psiquePatientIds, selectedMonth, psiquePayments, professionalName]);
 
-    // Subscribe to Psique payments collection
+    // Subscribe to Psique payments collection (filtered by professional if set)
     useEffect(() => {
         setLoading(true);
 
         const paymentsRef = collection(db, PSIQUE_PAYMENTS_COLLECTION);
 
-        const unsubscribe = onSnapshot(paymentsRef, (snapshot) => {
+        // If professional name is set, filter by it
+        const paymentsQuery = professionalName
+            ? query(paymentsRef, where('professional', '==', professionalName))
+            : paymentsRef;
+
+        const unsubscribe = onSnapshot(paymentsQuery, (snapshot) => {
             const data: Record<string, PsiquePayment> = {};
             snapshot.docs.forEach(doc => {
                 data[doc.id] = { id: doc.id, ...doc.data() } as PsiquePayment;
@@ -109,16 +126,18 @@ export const usePsiquePayments = (
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [professionalName]);
 
-    // Mark month as paid
+    // Mark month as paid (with professional isolation)
     const markAsPaid = async (month: string, isPaid: boolean) => {
-        const docRef = doc(db, PSIQUE_PAYMENTS_COLLECTION, month);
+        const docKey = getDocKey(month, professionalName);
+        const docRef = doc(db, PSIQUE_PAYMENTS_COLLECTION, docKey);
 
-        const data: Omit<PsiquePayment, 'id'> = {
+        const data: Omit<PsiquePayment, 'id'> & { professional?: string } = {
             month,
             totalAmount: monthData.totalAmount,
             isPaid,
+            professional: professionalName,  // Store professional for filtering
             ...(isPaid ? { paidDate: new Date().toISOString().split('T')[0] } : {})
         };
 

@@ -115,7 +115,7 @@ export default function LumenApp() {
                             />
                         )}
                         {currentView === 'payments' && (
-                            <PaymentsView user={user} />
+                            <PaymentsView user={user} profile={profile} />
                         )}
                         {currentView === 'billing' && (
                             <BillingView />

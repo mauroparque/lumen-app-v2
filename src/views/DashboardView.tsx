@@ -24,7 +24,7 @@ export const DashboardView = ({ user, profile, onNavigate }: DashboardViewProps)
 
     // Psique payments for current month
     const currentMonth = useMemo(() => new Date(), []);
-    const { monthData: psiqueData } = usePsiquePayments(appointments, patients, currentMonth);
+    const { monthData: psiqueData } = usePsiquePayments(appointments, patients, currentMonth, profile.name);
 
     // Fecha de hoy en formato YYYY-MM-DD
     const today = useMemo(() => {

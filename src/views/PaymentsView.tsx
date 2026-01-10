@@ -12,11 +12,12 @@ import { Appointment, Payment } from '../types';
 
 interface PaymentsViewProps {
     user: User;
+    profile: { name?: string };
 }
 
 const PSIQUE_RATE = 0.25;
 
-export const PaymentsView = ({ user }: PaymentsViewProps) => {
+export const PaymentsView = ({ user, profile }: PaymentsViewProps) => {
     const { appointments, payments, loading } = useData();
     const { patients } = usePatients(user);
     const [searchTerm, setSearchTerm] = useState('');
@@ -29,7 +30,7 @@ export const PaymentsView = ({ user }: PaymentsViewProps) => {
     const [selectedIsPsique, setSelectedIsPsique] = useState(false);
 
     // Psique payments hook
-    const { monthData: psiqueData, loading: psiqueLoading, markAsPaid } = usePsiquePayments(appointments, patients, selectedDate);
+    const { monthData: psiqueData, loading: psiqueLoading, markAsPaid } = usePsiquePayments(appointments, patients, selectedDate, profile.name);
 
     // Agenda stats for projection
     const agendaStats = useAgendaStats(appointments, patients);

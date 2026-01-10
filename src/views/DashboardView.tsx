@@ -100,7 +100,7 @@ export const DashboardView = ({ user, profile, onNavigate }: DashboardViewProps)
         const paidThisMonth = thisMonthAppointments.filter(a => a.isPaid).reduce((sum, a) => sum + (a.price || 0), 0);
 
         return {
-            totalPatients: patients.length,
+            totalPatients: patients.filter(p => p.isActive !== false).length,
             todayCount: todayAppointments.length,
             totalDebt,
             completedThisMonth,

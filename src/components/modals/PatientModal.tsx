@@ -4,7 +4,7 @@ import { ModalOverlay } from '../ui';
 import { useDataActions } from '../../hooks/useDataActions';
 import { usePatients } from '../../hooks/usePatients';
 import { toast } from 'sonner';
-import { StaffProfile, ContactRelationship, Patient } from '../../types';
+import { StaffProfile, ContactRelationship, Patient, PatientInput } from '../../types';
 import { ChevronDown, ChevronUp, Baby } from 'lucide-react';
 
 interface PatientModalProps {
@@ -124,7 +124,9 @@ export const PatientModal = ({ onClose, user, profile, existingPatient }: Patien
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const patientData = {
+            // Build patient data, then filter out undefined values
+            // Firebase doesn't accept undefined field values
+            const rawPatientData = {
                 firstName: form.firstName,
                 lastName: form.lastName,
                 name: `${form.firstName} ${form.lastName}`.trim(),
@@ -150,6 +152,11 @@ export const PatientModal = ({ onClose, user, profile, existingPatient }: Patien
                     ? form.contactRelationshipOther
                     : undefined,
             };
+
+            // Remove undefined fields - Firebase doesn't accept undefined values
+            const patientData = Object.fromEntries(
+                Object.entries(rawPatientData).filter(([_, value]) => value !== undefined)
+            ) as unknown as PatientInput;
 
             if (existingPatient) {
                 await updatePatient(existingPatient.id, patientData);

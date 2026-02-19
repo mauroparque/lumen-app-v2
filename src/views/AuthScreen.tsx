@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { auth, db } from '../lib/firebase';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { ALLOWED_EMAILS_COLLECTION, STAFF_COLLECTION } from '../lib/routes';
@@ -37,6 +38,17 @@ export const AuthScreen = () => {
         setIsLoading(true);
 
         try {
+            // Validate Turnstile token server-side
+            try {
+                const functions = getFunctions();
+                const validateTurnstile = httpsCallable(functions, 'validateTurnstile');
+                await validateTurnstile({ token: turnstileToken });
+            } catch (turnstileErr: any) {
+                setError('La verificación de seguridad falló. Intentá de nuevo.');
+                setIsLoading(false);
+                return;
+            }
+
             // Save or clear remembered email
             if (rememberMe) {
                 localStorage.setItem('lumen_remembered_email', email);

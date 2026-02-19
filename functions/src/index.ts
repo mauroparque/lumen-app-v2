@@ -1,8 +1,49 @@
+import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import axios from "axios";
 
 admin.initializeApp();
+
+export const validateTurnstile = onCall(
+    {
+        enforceAppCheck: false,
+        secrets: ["TURNSTILE_SECRET"],
+    },
+    async (request) => {
+        const token = request.data?.token;
+
+        if (!token || typeof token !== "string") {
+            throw new HttpsError("invalid-argument", "Missing turnstile token");
+        }
+
+        const secret = process.env.TURNSTILE_SECRET;
+        if (!secret) {
+            console.error("TURNSTILE_SECRET not configured");
+            throw new HttpsError("internal", "Server misconfiguration");
+        }
+
+        const response = await fetch(
+            "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({
+                    secret,
+                    response: token,
+                }),
+            }
+        );
+
+        const result = await response.json() as { success: boolean };
+
+        if (!result.success) {
+            throw new HttpsError("permission-denied", "Turnstile verification failed");
+        }
+
+        return { verified: true };
+    }
+);
 
 export const triggerInvoiceGeneration = functions.firestore
     .document("artifacts/{appId}/clinics/{clinicId}/integrations/billing/queue/{docId}")

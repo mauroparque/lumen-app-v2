@@ -1,3 +1,6 @@
+// Prerequisito: firebase-admin disponible en node_modules o en functions/node_modules
+// Ejecutar desde root: NODE_PATH=./functions/node_modules npx tsx scripts/seed-allowlist.ts
+// Requiere: GOOGLE_APPLICATION_CREDENTIALS=path/to/serviceAccount.json
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 

@@ -1,8 +1,15 @@
 // Prerequisito: firebase-admin disponible en functions/node_modules
 // Ejecutar desde el worktree:
-//   $env:NODE_PATH = "$PWD\functions\node_modules"
-//   $env:GOOGLE_APPLICATION_CREDENTIALS = "C:\ruta\a\serviceAccount.json"
-//   npx tsx scripts/seed-allowlist.ts
+//
+//   (Windows / PowerShell)
+//     $env:NODE_PATH = "$PWD\functions\node_modules"
+//     $env:GOOGLE_APPLICATION_CREDENTIALS = "C:\ruta\a\serviceAccount.json"
+//     npx tsx scripts/seed-allowlist.ts
+//
+//   (macOS / Linux, bash/zsh)
+//     NODE_PATH="$(pwd)/functions/node_modules" \
+//     GOOGLE_APPLICATION_CREDENTIALS="/ruta/a/serviceAccount.json" \
+//       npx tsx scripts/seed-allowlist.ts
 //
 // Para obtener el serviceAccount.json:
 //   Firebase Console → Project Settings → Service accounts → Generate new private key

@@ -9,7 +9,8 @@
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-initializeApp({ projectId: 'lumen-production' });
+// projectId se detecta automáticamente desde las credenciales del service account
+initializeApp();
 const db = getFirestore();
 
 const APP_ID = 'lumen-production';

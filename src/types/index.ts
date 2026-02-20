@@ -102,6 +102,7 @@ export interface ClinicalNote {
     createdAt: Timestamp;
     updatedAt?: Timestamp;
     createdBy: string;
+    createdByUid: string; // UID del autor — usado por reglas de acceso estrictas en Firestore
 }
 
 export interface StaffProfile {

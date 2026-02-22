@@ -372,6 +372,14 @@ export class FirebaseService implements IDataService {
         await updateDoc(appointmentRef, { hasNotes: true });
     }
 
+    async updateNote(noteId: string, data: Partial<ClinicalNote>): Promise<void> {
+        const noteRef = doc(db, NOTES_COLLECTION, noteId);
+        await updateDoc(noteRef, {
+            ...data,
+            updatedAt: Timestamp.now(),
+        });
+    }
+
     async uploadNoteAttachment(file: File, patientId: string): Promise<string> {
         const timestamp = Date.now();
         const storageRef = ref(storage, `patients/${patientId}/attachments/${timestamp}_${file.name}`);

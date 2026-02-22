@@ -25,7 +25,7 @@ interface TaskFormData {
 export const TasksView = ({ user, profile }: TasksViewProps) => {
     const { patients, loading: loadingPatients } = usePatients(user);
     const { appointments } = useData();
-    const { addTask } = useDataActions();
+    const { addTask, updateNote } = useDataActions();
 
     // Create set of patient IDs for filtering tasks
     const myPatientIds = useMemo(() => new Set(patients.map((p) => p.id)), [patients]);
@@ -187,9 +187,8 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
                         text: editForm.text.trim(),
                         subtasks: editForm.subtasks,
                     };
-                    await updateDoc(noteRef, {
+                    await updateNote(editingTask.noteId, {
                         tasks: updatedTasks,
-                        updatedAt: Timestamp.now(),
                     });
                     toast.success('Tarea actualizada');
                     setEditingTask(null);

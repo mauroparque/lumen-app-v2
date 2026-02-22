@@ -8,6 +8,7 @@ import {
     Payment,
     PatientBillingData,
     TaskInput,
+    ClinicalNote,
 } from '../types';
 
 export const useDataActions = () => {
@@ -83,6 +84,10 @@ export const useDataActions = () => {
         return ensureService().addTask(task);
     };
 
+    const updateNote = async (noteId: string, data: Partial<ClinicalNote>) => {
+        return ensureService().updateNote(noteId, data);
+    };
+
     return {
         addPatient,
         addAppointment,
@@ -97,5 +102,6 @@ export const useDataActions = () => {
         deleteRecurringFromDate,
         completeTask,
         addTask,
+        updateNote,
     };
 };

@@ -45,6 +45,7 @@ export interface IDataService {
     subscribeToClinicalNote(appointmentId: string, onData: (note: ClinicalNote | null) => void): () => void;
     subscribeToPatientNotes(patientId: string, onData: (notes: ClinicalNote[]) => void): () => void;
     saveNote(noteData: Partial<ClinicalNote>, appointmentId: string, existingNoteId?: string): Promise<void>;
+    updateNote(noteId: string, data: Partial<ClinicalNote>): Promise<void>;
     uploadNoteAttachment(file: File, patientId: string): Promise<string>;
 
     // --- Tasks ---

@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { ModalOverlay } from '../ui';
 import { Plus, X } from 'lucide-react';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
-import { db, appId, CLINIC_ID } from '../../lib/firebase';
 import { toast } from 'sonner';
+import { useDataActions } from '../../hooks/useDataActions';
 
 interface AddTaskModalProps {
     onClose: () => void;
@@ -15,6 +14,7 @@ interface AddTaskModalProps {
 export const AddTaskModal = ({ onClose, patientId, patientName, userName }: AddTaskModalProps) => {
     const [taskText, setTaskText] = useState('');
     const [saving, setSaving] = useState(false);
+    const { addTask } = useDataActions();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -22,18 +22,11 @@ export const AddTaskModal = ({ onClose, patientId, patientName, userName }: AddT
 
         setSaving(true);
         try {
-            // Create a standalone note with just tasks (no appointment)
-            const notesCollection = collection(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'notes');
-
-            await addDoc(notesCollection, {
+            await addTask({
                 patientId,
-                appointmentId: `standalone-${patientId}-${Date.now()}`, // Special prefix for standalone tasks
-                content: '',
-                attachments: [],
-                tasks: [{ text: taskText.trim(), completed: false }],
-                createdAt: Timestamp.now(),
-                updatedAt: Timestamp.now(),
-                createdBy: userName,
+                professional: userName,
+                content: taskText.trim(),
+                createdBy: '',
             });
 
             toast.success('Tarea creada');

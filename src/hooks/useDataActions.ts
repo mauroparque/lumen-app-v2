@@ -7,6 +7,7 @@ import {
     Appointment,
     Payment,
     PatientBillingData,
+    TaskInput,
 } from '../types';
 
 export const useDataActions = () => {
@@ -74,6 +75,14 @@ export const useDataActions = () => {
         return ensureService().updatePayment(id, data);
     };
 
+    const completeTask = async (noteId: string, taskIndex: number) => {
+        return ensureService().completeTask(noteId, taskIndex);
+    };
+
+    const addTask = async (task: TaskInput) => {
+        return ensureService().addTask(task);
+    };
+
     return {
         addPatient,
         addAppointment,
@@ -86,5 +95,7 @@ export const useDataActions = () => {
         requestBatchInvoice,
         deleteRecurringSeries,
         deleteRecurringFromDate,
+        completeTask,
+        addTask,
     };
 };

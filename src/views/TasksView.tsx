@@ -5,9 +5,10 @@ import { StaffProfile, ClinicalNote } from '../types';
 import { usePatients } from '../hooks/usePatients';
 import { useData } from '../context/DataContext';
 import { usePendingTasks, PendingTask } from '../hooks/usePendingTasks';
+import { useDataActions } from '../hooks/useDataActions';
 import { LoadingSpinner } from '../components/ui';
 import { toast } from 'sonner';
-import { collection, addDoc, updateDoc, doc, getDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db, appId, CLINIC_ID } from '../lib/firebase';
 
 interface TasksViewProps {
@@ -24,6 +25,7 @@ interface TaskFormData {
 export const TasksView = ({ user, profile }: TasksViewProps) => {
     const { patients, loading: loadingPatients } = usePatients(user);
     const { appointments } = useData();
+    const { addTask } = useDataActions();
 
     // Create set of patient IDs for filtering tasks
     const myPatientIds = useMemo(() => new Set(patients.map((p) => p.id)), [patients]);
@@ -122,24 +124,11 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
         }
 
         try {
-            const notesCollection = collection(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'notes');
-
-            // Create task with subtasks
-            const taskData = {
-                text: newTask.text.trim(),
-                completed: false,
-                subtasks: newTask.subtasks,
-            };
-
-            await addDoc(notesCollection, {
+            await addTask({
                 patientId: newTask.patientId,
-                appointmentId: `standalone-${newTask.patientId}-${Date.now()}`,
-                content: '',
-                attachments: [],
-                tasks: [taskData],
-                createdAt: Timestamp.now(),
-                updatedAt: Timestamp.now(),
-                createdBy: profile?.name || user.displayName || user.email,
+                professional: profile?.name || user.displayName || user.email || '',
+                content: newTask.text.trim(),
+                createdBy: user.uid,
             });
 
             toast.success('Tarea creada');

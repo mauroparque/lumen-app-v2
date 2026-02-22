@@ -29,7 +29,7 @@ import {
 import { toast } from 'sonner';
 import { useBillingStatus } from '../../hooks/useBillingStatus';
 import { useDataActions } from '../../hooks/useDataActions';
-import { useClinicalNotes } from '../../hooks/useClinicalNotes';
+import { useClinicalNote } from '../../hooks/useClinicalNotes';
 
 interface AppointmentDetailsModalProps {
     appointment: Appointment;
@@ -38,10 +38,9 @@ interface AppointmentDetailsModalProps {
     user: User;
 }
 
-export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: AppointmentDetailsModalProps) => {
+export const AppointmentDetailsModal = ({ appointment, onClose, onEdit }: AppointmentDetailsModalProps) => {
     const [activeTab, setActiveTab] = useState<'details' | 'history'>('details');
-    const { useClinicalNote, saveNote, uploadAttachment, loading: saving } = useClinicalNotes(user);
-    const { note, loadingNote } = useClinicalNote(appointment.id);
+    const { note, loading: loadingNote, saveNote, uploadAttachment } = useClinicalNote(appointment.id);
     const { requestBatchInvoice, deleteItem, deleteRecurringSeries, deleteRecurringFromDate, updateAppointment } =
         useDataActions();
 
@@ -178,7 +177,6 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
                     tasks,
                     patientId: appointment.patientId,
                 },
-                appointment.id,
                 note?.id,
             );
             toast.success('Evolución guardada correctamente');
@@ -669,10 +667,10 @@ export const AppointmentDetailsModal = ({ appointment, onClose, onEdit, user }: 
                                     <div className="flex justify-end border-t border-slate-100 pt-4">
                                         <button
                                             onClick={handleSaveNote}
-                                            disabled={saving}
+                                            disabled={loadingNote}
                                             className="px-6 py-2.5 bg-teal-600 text-white rounded-xl hover:bg-teal-700 shadow-sm font-medium flex items-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                         >
-                                            {saving ? (
+                                            {loadingNote ? (
                                                 <>
                                                     <Loader2 size={18} className="mr-2 animate-spin" /> Guardando...
                                                 </>

@@ -13,16 +13,21 @@ import {
     serverTimestamp,
     Timestamp,
     getDocs,
+    getDoc,
+    setDoc,
 } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, storage } from '../lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import {
     PATIENTS_COLLECTION,
     APPOINTMENTS_COLLECTION,
     PAYMENTS_COLLECTION,
     BILLING_QUEUE_COLLECTION,
+    NOTES_COLLECTION,
+    PSIQUE_PAYMENTS_COLLECTION,
 } from '../lib/routes';
 import { IDataService } from './IDataService';
-import {
+import type {
     Patient,
     Appointment,
     Payment,
@@ -30,6 +35,9 @@ import {
     AppointmentInput,
     PaymentInput,
     PatientBillingData,
+    ClinicalNote,
+    TaskInput,
+    PsiquePayment,
 } from '../types';
 
 export class FirebaseService implements IDataService {
@@ -297,5 +305,179 @@ export class FirebaseService implements IDataService {
         });
 
         return docRef.id;
+    }
+
+    // --- Clinical Notes ---
+    subscribeToClinicalNote(appointmentId: string, onData: (note: ClinicalNote | null) => void): () => void {
+        const q = query(collection(db, NOTES_COLLECTION), where('appointmentId', '==', appointmentId));
+
+        return onSnapshot(
+            q,
+            (snapshot) => {
+                if (!snapshot.empty) {
+                    const docData = snapshot.docs[0];
+                    onData({ id: docData.id, ...docData.data() } as ClinicalNote);
+                } else {
+                    onData(null);
+                }
+            },
+            (error) => console.error('Error fetching clinical note:', error),
+        );
+    }
+
+    subscribeToPatientNotes(patientId: string, onData: (notes: ClinicalNote[]) => void): () => void {
+        const q = query(collection(db, NOTES_COLLECTION), where('patientId', '==', patientId));
+
+        return onSnapshot(
+            q,
+            (snapshot) => {
+                const fetchedNotes = snapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                })) as ClinicalNote[];
+                // Sort by createdAt descending
+                fetchedNotes.sort((a, b) => {
+                    const dateA = a.createdAt?.toDate?.() || new Date(0);
+                    const dateB = b.createdAt?.toDate?.() || new Date(0);
+                    return dateB.getTime() - dateA.getTime();
+                });
+                onData(fetchedNotes);
+            },
+            (error) => console.error('Error fetching patient notes:', error),
+        );
+    }
+
+    async saveNote(noteData: Partial<ClinicalNote>, appointmentId: string, existingNoteId?: string): Promise<void> {
+        const notesCollection = collection(db, NOTES_COLLECTION);
+
+        const basePayload = {
+            ...noteData,
+            appointmentId,
+            updatedAt: Timestamp.now(),
+        };
+
+        if (existingNoteId) {
+            await updateDoc(doc(notesCollection, existingNoteId), basePayload);
+        } else {
+            await addDoc(notesCollection, {
+                ...basePayload,
+                createdAt: Timestamp.now(),
+                createdBy: this.uid,
+                createdByUid: this.uid,
+            });
+        }
+
+        // Update appointment to indicate it has notes
+        const appointmentRef = doc(db, APPOINTMENTS_COLLECTION, appointmentId);
+        await updateDoc(appointmentRef, { hasNotes: true });
+    }
+
+    async uploadNoteAttachment(file: File, patientId: string): Promise<string> {
+        const timestamp = Date.now();
+        const storageRef = ref(storage, `patients/${patientId}/attachments/${timestamp}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        const url = await getDownloadURL(storageRef);
+        return url;
+    }
+
+    // --- Tasks ---
+    subscribeToAllNotes(onData: (notes: ClinicalNote[]) => void): () => void {
+        const q = query(collection(db, NOTES_COLLECTION));
+
+        return onSnapshot(
+            q,
+            (snapshot) => {
+                const notes = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as ClinicalNote[];
+                onData(notes);
+            },
+            (error) => console.error('Error fetching all notes:', error),
+        );
+    }
+
+    async completeTask(noteId: string, taskIndex: number): Promise<void> {
+        const noteRef = doc(db, NOTES_COLLECTION, noteId);
+        const noteSnap = await getDoc(noteRef);
+
+        if (!noteSnap.exists()) {
+            throw new Error('Note not found');
+        }
+
+        const noteData = noteSnap.data() as ClinicalNote;
+        const updatedTasks = [...(noteData.tasks || [])];
+
+        if (updatedTasks[taskIndex]) {
+            updatedTasks[taskIndex].completed = true;
+            await updateDoc(noteRef, { tasks: updatedTasks });
+        }
+    }
+
+    async addTask(task: TaskInput): Promise<string> {
+        const colRef = collection(db, NOTES_COLLECTION);
+        const docRef = await addDoc(colRef, {
+            ...task,
+            type: 'task',
+            createdAt: Timestamp.now(),
+            tasks: [{ text: task.content, completed: false }],
+        });
+        return docRef.id;
+    }
+
+    // --- Psique Payments ---
+    subscribeToPsiquePayments(
+        professionalName: string | undefined,
+        onData: (payments: Record<string, PsiquePayment>) => void,
+    ): () => void {
+        const paymentsRef = collection(db, PSIQUE_PAYMENTS_COLLECTION);
+
+        const paymentsQuery = professionalName
+            ? query(paymentsRef, where('professional', '==', professionalName))
+            : paymentsRef;
+
+        return onSnapshot(
+            paymentsQuery,
+            (snapshot) => {
+                const data: Record<string, PsiquePayment> = {};
+                snapshot.docs.forEach((doc) => {
+                    data[doc.id] = { id: doc.id, ...doc.data() } as PsiquePayment;
+                });
+                onData(data);
+            },
+            (error) => console.error('Error fetching Psique payments:', error),
+        );
+    }
+
+    async markPsiquePaymentAsPaid(
+        docKey: string,
+        data: Omit<PsiquePayment, 'id'> & { professional?: string },
+    ): Promise<void> {
+        const docRef = doc(db, PSIQUE_PAYMENTS_COLLECTION, docKey);
+        await setDoc(docRef, data, { merge: true });
+    }
+
+    // --- Patient-specific data ---
+    subscribeToPatientAppointments(patientId: string, onData: (appointments: Appointment[]) => void): () => void {
+        const q = query(collection(db, APPOINTMENTS_COLLECTION), where('patientId', '==', patientId), orderBy('date', 'desc'));
+
+        return onSnapshot(
+            q,
+            (snapshot) => {
+                const appointments = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Appointment[];
+                onData(appointments);
+            },
+            (error) => console.error('Error fetching patient appointments:', error),
+        );
+    }
+
+    subscribeToPatientPayments(patientId: string, onData: (payments: Payment[]) => void): () => void {
+        const q = query(collection(db, PAYMENTS_COLLECTION), where('patientId', '==', patientId), orderBy('date', 'desc'));
+
+        return onSnapshot(
+            q,
+            (snapshot) => {
+                const payments = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Payment[];
+                onData(payments);
+            },
+            (error) => console.error('Error fetching patient payments:', error),
+        );
     }
 }

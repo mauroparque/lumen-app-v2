@@ -12,6 +12,7 @@ import { Sidebar } from './components/layout/Sidebar';
 import { MobileHeader } from './components/layout/MobileHeader';
 import { ProfileModal } from './components/modals/ProfileModal';
 import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
+import { AppErrorBoundary } from './components/ErrorBoundary';
 
 // Views - Lazy Loaded
 const AuthScreen = lazy(() => import('./views/AuthScreen').then((module) => ({ default: module.AuthScreen })));
@@ -65,16 +66,18 @@ export default function LumenApp() {
 
     if (!user) {
         return (
-            <Suspense
-                fallback={
-                    <div className="h-screen flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
-                    </div>
-                }
-            >
-                <AuthScreen />
-                {pwaPrompt}
-            </Suspense>
+            <AppErrorBoundary>
+                <Suspense
+                    fallback={
+                        <div className="h-screen flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+                        </div>
+                    }
+                >
+                    <AuthScreen />
+                    {pwaPrompt}
+                </Suspense>
+            </AppErrorBoundary>
         );
     }
 
@@ -114,7 +117,8 @@ export default function LumenApp() {
 
                     {/* Content */}
                     <main className="flex-1 overflow-auto pt-16 md:pt-0 relative">
-                        <Suspense fallback={<LoadingFallback />}>
+                        <AppErrorBoundary>
+                            <Suspense fallback={<LoadingFallback />}>
                             {(currentView === 'home' || currentView === 'dashboard') && (
                                 <DashboardView
                                     user={user}
@@ -145,7 +149,8 @@ export default function LumenApp() {
                             {currentView === 'billing' && <BillingView />}
                             {currentView === 'tasks' && <TasksView user={user} profile={profile} />}
                             {currentView === 'statistics' && <StatisticsView user={user} />}
-                        </Suspense>
+                            </Suspense>
+                        </AppErrorBoundary>
                     </main>
                 </div>
             </DataProvider>

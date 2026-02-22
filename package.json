@@ -13,7 +13,9 @@
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\""
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
+    "type-check": "tsc --noEmit",
+    "ci": "npm run type-check && npm run lint && npm test -- --run && npm run build"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.4.0",

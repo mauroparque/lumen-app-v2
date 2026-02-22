@@ -36,3 +36,8 @@ dist-ssr
 .agents
 .worktrees
 worktrees
+
+# Test artifacts
+playwright-report/
+test-results/
+coverage/

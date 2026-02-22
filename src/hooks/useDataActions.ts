@@ -9,6 +9,7 @@ import {
     PatientBillingData,
     TaskInput,
     ClinicalNote,
+    PsiquePayment,
 } from '../types';
 
 export const useDataActions = () => {
@@ -88,6 +89,13 @@ export const useDataActions = () => {
         return ensureService().updateNote(noteId, data);
     };
 
+    const markPsiquePaymentAsPaid = async (
+        docKey: string,
+        data: Omit<PsiquePayment, 'id'> & { professional?: string },
+    ) => {
+        return ensureService().markPsiquePaymentAsPaid(docKey, data);
+    };
+
     return {
         addPatient,
         addAppointment,
@@ -103,5 +111,6 @@ export const useDataActions = () => {
         completeTask,
         addTask,
         updateNote,
+        markPsiquePaymentAsPaid,
     };
 };

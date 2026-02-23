@@ -1,17 +1,13 @@
 import { useState, useMemo } from 'react';
 import { User } from 'firebase/auth';
-import {
-    ListTodo, Plus, Search, Square,
-    User as UserIcon, X, Save, Edit2
-} from 'lucide-react';
-import { StaffProfile, ClinicalNote } from '../types';
+import { ListTodo, Plus, Search, Square, User as UserIcon, X, Save, Edit2 } from 'lucide-react';
+import { StaffProfile } from '../types';
 import { usePatients } from '../hooks/usePatients';
 import { useData } from '../context/DataContext';
 import { usePendingTasks, PendingTask } from '../hooks/usePendingTasks';
+import { useDataActions } from '../hooks/useDataActions';
 import { LoadingSpinner } from '../components/ui';
 import { toast } from 'sonner';
-import { collection, addDoc, updateDoc, doc, getDoc, Timestamp } from 'firebase/firestore';
-import { db, appId, CLINIC_ID } from '../lib/firebase';
 
 interface TasksViewProps {
     user: User;
@@ -27,9 +23,10 @@ interface TaskFormData {
 export const TasksView = ({ user, profile }: TasksViewProps) => {
     const { patients, loading: loadingPatients } = usePatients(user);
     const { appointments } = useData();
+    const { addTask, updateTask, toggleSubtaskCompletion } = useDataActions();
 
     // Create set of patient IDs for filtering tasks
-    const myPatientIds = useMemo(() => new Set(patients.map(p => p.id)), [patients]);
+    const myPatientIds = useMemo(() => new Set(patients.map((p) => p.id)), [patients]);
 
     const { pendingTasks, loading: loadingTasks, completeTask } = usePendingTasks(appointments, myPatientIds);
 
@@ -48,7 +45,7 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
     const [newTask, setNewTask] = useState<TaskFormData>({
         text: '',
         patientId: '',
-        subtasks: []
+        subtasks: [],
     });
     const [newSubtask, setNewSubtask] = useState('');
 
@@ -69,24 +66,28 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
 
         // Filter by patient
         if (filterPatient) {
-            result = result.filter(t => t.patientId === filterPatient);
+            result = result.filter((t) => t.patientId === filterPatient);
         }
 
         // Filter by date
         if (filterDate === 'today') {
-            result = result.filter(t => t.appointmentDate === today);
+            result = result.filter((t) => t.appointmentDate === today);
         } else if (filterDate === 'week') {
-            result = result.filter(t => t.appointmentDate && t.appointmentDate <= weekFromNow);
+            result = result.filter((t) => t.appointmentDate && t.appointmentDate <= weekFromNow);
         } else if (filterDate === 'overdue') {
-            result = result.filter(t => t.appointmentDate && t.appointmentDate < today);
+            result = result.filter((t) => t.appointmentDate && t.appointmentDate < today);
         }
 
         // Filter by search term
         if (searchTerm) {
             const lower = searchTerm.toLowerCase();
-            result = result.filter(t =>
-                t.text.toLowerCase().includes(lower) ||
-                patients.find(p => p.id === t.patientId)?.name.toLowerCase().includes(lower)
+            result = result.filter(
+                (t) =>
+                    t.text.toLowerCase().includes(lower) ||
+                    patients
+                        .find((p) => p.id === t.patientId)
+                        ?.name.toLowerCase()
+                        .includes(lower),
             );
         }
 
@@ -96,7 +97,7 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
     // Group tasks by patient
     const tasksByPatient = useMemo(() => {
         const grouped: Record<string, PendingTask[]> = {};
-        filteredTasks.forEach(task => {
+        filteredTasks.forEach((task) => {
             if (!grouped[task.patientId]) {
                 grouped[task.patientId] = [];
             }
@@ -121,24 +122,13 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
         }
 
         try {
-            const notesCollection = collection(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'notes');
-
-            // Create task with subtasks
-            const taskData = {
-                text: newTask.text.trim(),
-                completed: false,
-                subtasks: newTask.subtasks
-            };
-
-            await addDoc(notesCollection, {
+            await addTask({
                 patientId: newTask.patientId,
-                appointmentId: `standalone-${newTask.patientId}-${Date.now()}`,
-                content: '',
-                attachments: [],
-                tasks: [taskData],
-                createdAt: Timestamp.now(),
-                updatedAt: Timestamp.now(),
-                createdBy: profile?.name || user.displayName || user.email
+                professional: profile?.name || user.displayName || user.email || '',
+                content: newTask.text.trim(),
+                createdBy: profile?.name || user.displayName || user.email || '',
+                createdByUid: user.uid,
+                subtasks: newTask.subtasks.length > 0 ? newTask.subtasks : undefined,
             });
 
             toast.success('Tarea creada');
@@ -154,7 +144,7 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
         if (newSubtask.trim()) {
             setNewTask({
                 ...newTask,
-                subtasks: [...newTask.subtasks, { text: newSubtask.trim(), completed: false }]
+                subtasks: [...newTask.subtasks, { text: newSubtask.trim(), completed: false }],
             });
             setNewSubtask('');
         }
@@ -163,7 +153,7 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
     const removeSubtask = (index: number) => {
         setNewTask({
             ...newTask,
-            subtasks: newTask.subtasks.filter((_, i) => i !== index)
+            subtasks: newTask.subtasks.filter((_, i) => i !== index),
         });
     };
 
@@ -173,7 +163,7 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
         setEditForm({
             text: task.text,
             patientId: task.patientId,
-            subtasks: task.subtasks || []
+            subtasks: task.subtasks || [],
         });
     };
 
@@ -184,28 +174,13 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
         }
 
         try {
-            const noteRef = doc(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'notes', editingTask.noteId);
-            const noteSnap = await getDoc(noteRef);
-
-            if (noteSnap.exists()) {
-                const noteData = noteSnap.data() as ClinicalNote;
-                const updatedTasks = [...(noteData.tasks || [])];
-
-                if (updatedTasks[editingTask.taskIndex]) {
-                    updatedTasks[editingTask.taskIndex] = {
-                        ...updatedTasks[editingTask.taskIndex],
-                        text: editForm.text.trim(),
-                        subtasks: editForm.subtasks
-                    };
-                    await updateDoc(noteRef, {
-                        tasks: updatedTasks,
-                        updatedAt: Timestamp.now()
-                    });
-                    toast.success('Tarea actualizada');
-                    setEditingTask(null);
-                    setEditForm({ text: '', patientId: '', subtasks: [] });
-                }
-            }
+            await updateTask(editingTask.noteId, editingTask.taskIndex, {
+                text: editForm.text.trim(),
+                subtasks: editForm.subtasks,
+            });
+            toast.success('Tarea actualizada');
+            setEditingTask(null);
+            setEditForm({ text: '', patientId: '', subtasks: [] });
         } catch (error) {
             console.error('Error updating task:', error);
             toast.error('Error al actualizar la tarea');
@@ -216,7 +191,7 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
         if (editSubtask.trim()) {
             setEditForm({
                 ...editForm,
-                subtasks: [...editForm.subtasks, { text: editSubtask.trim(), completed: false }]
+                subtasks: [...editForm.subtasks, { text: editSubtask.trim(), completed: false }],
             });
             setEditSubtask('');
         }
@@ -225,7 +200,7 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
     const removeEditSubtask = (index: number) => {
         setEditForm({
             ...editForm,
-            subtasks: editForm.subtasks.filter((_, i) => i !== index)
+            subtasks: editForm.subtasks.filter((_, i) => i !== index),
         });
     };
 
@@ -238,32 +213,8 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
     // Toggle subtask completion directly from the list view
     const toggleSubtaskComplete = async (task: PendingTask, subtaskIndex: number) => {
         try {
-            const noteRef = doc(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'notes', task.noteId);
-            const noteSnap = await getDoc(noteRef);
-
-            if (noteSnap.exists()) {
-                const noteData = noteSnap.data() as ClinicalNote;
-                const updatedTasks = [...(noteData.tasks || [])];
-
-                if (updatedTasks[task.taskIndex] && updatedTasks[task.taskIndex].subtasks) {
-                    const subtasks = [...(updatedTasks[task.taskIndex].subtasks || [])];
-                    if (subtasks[subtaskIndex]) {
-                        subtasks[subtaskIndex] = {
-                            ...subtasks[subtaskIndex],
-                            completed: !subtasks[subtaskIndex].completed
-                        };
-                        updatedTasks[task.taskIndex] = {
-                            ...updatedTasks[task.taskIndex],
-                            subtasks
-                        };
-                        await updateDoc(noteRef, {
-                            tasks: updatedTasks,
-                            updatedAt: Timestamp.now()
-                        });
-                        toast.success(subtasks[subtaskIndex].completed ? 'Subitem completado' : 'Subitem pendiente');
-                    }
-                }
-            }
+            await toggleSubtaskCompletion(task.noteId, task.taskIndex, subtaskIndex);
+            toast.success('Subitem actualizado');
         } catch (error) {
             console.error('Error toggling subtask:', error);
             toast.error('Error al actualizar subitem');
@@ -278,7 +229,7 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
     };
 
     const getPatientName = (patientId: string): string => {
-        return patients.find(p => p.id === patientId)?.name || 'Paciente';
+        return patients.find((p) => p.id === patientId)?.name || 'Paciente';
     };
 
     if (loadingPatients || loadingTasks) {
@@ -298,9 +249,7 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
                         <ListTodo className="text-amber-500" />
                         Tareas
                     </h1>
-                    <p className="text-slate-500 text-sm mt-1">
-                        {filteredTasks.length} tarea(s) pendiente(s)
-                    </p>
+                    <p className="text-slate-500 text-sm mt-1">{filteredTasks.length} tarea(s) pendiente(s)</p>
                 </div>
                 <button
                     onClick={() => setShowNewTask(true)}
@@ -316,7 +265,10 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
                 <div className="flex flex-col md:flex-row gap-4">
                     {/* Search */}
                     <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+                        <Search
+                            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+                            size={18}
+                        />
                         <input
                             type="text"
                             placeholder="Buscar tarea..."
@@ -334,10 +286,12 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
                     >
                         <option value="">Todos los pacientes</option>
                         {patients
-                            .filter(p => p.isActive !== false)
+                            .filter((p) => p.isActive !== false)
                             .sort((a, b) => a.name.localeCompare(b.name))
-                            .map(p => (
-                                <option key={p.id} value={p.id}>{p.name}</option>
+                            .map((p) => (
+                                <option key={p.id} value={p.id}>
+                                    {p.name}
+                                </option>
                             ))}
                     </select>
 
@@ -347,15 +301,16 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
                             { value: 'all', label: 'Todas' },
                             { value: 'today', label: 'Hoy' },
                             { value: 'week', label: 'Semana' },
-                            { value: 'overdue', label: 'Vencidas' }
-                        ].map(opt => (
+                            { value: 'overdue', label: 'Vencidas' },
+                        ].map((opt) => (
                             <button
                                 key={opt.value}
                                 onClick={() => setFilterDate(opt.value as 'all' | 'today' | 'week' | 'overdue')}
-                                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${filterDate === opt.value
-                                    ? 'bg-white text-slate-700 shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-700'
-                                    }`}
+                                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                                    filterDate === opt.value
+                                        ? 'bg-white text-slate-700 shadow-sm'
+                                        : 'text-slate-500 hover:text-slate-700'
+                                }`}
                             >
                                 {opt.label}
                             </button>
@@ -370,8 +325,7 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
                     <ListTodo size={48} className="mx-auto mb-4 text-slate-200" />
                     {pendingTasks.length === 0
                         ? 'No hay tareas pendientes. ¡Buen trabajo!'
-                        : 'No hay tareas que coincidan con los filtros.'
-                    }
+                        : 'No hay tareas que coincidan con los filtros.'}
                 </div>
             ) : (
                 <div className="space-y-4">
@@ -416,10 +370,14 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
                                                                 <Edit2 size={14} />
                                                             </button>
                                                             {task.appointmentDate && (
-                                                                <span className={`text-xs px-2 py-0.5 rounded ${task.appointmentDate < today && !task.appointmentDate.startsWith('standalone-')
-                                                                    ? 'bg-red-100 text-red-600'
-                                                                    : 'bg-slate-100 text-slate-500'
-                                                                    }`}>
+                                                                <span
+                                                                    className={`text-xs px-2 py-0.5 rounded ${
+                                                                        task.appointmentDate < today &&
+                                                                        !task.appointmentDate.startsWith('standalone-')
+                                                                            ? 'bg-red-100 text-red-600'
+                                                                            : 'bg-slate-100 text-slate-500'
+                                                                    }`}
+                                                                >
                                                                     {formatDate(task.appointmentDate)}
                                                                 </span>
                                                             )}
@@ -436,11 +394,22 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
                                                                     className="flex items-center gap-2 text-sm w-full text-left hover:bg-slate-100 p-1 rounded transition-colors group"
                                                                 >
                                                                     {st.completed ? (
-                                                                        <span className="text-green-500 group-hover:text-green-600">✓</span>
+                                                                        <span className="text-green-500 group-hover:text-green-600">
+                                                                            ✓
+                                                                        </span>
                                                                     ) : (
-                                                                        <Square size={12} className="text-slate-300 group-hover:text-amber-400" />
+                                                                        <Square
+                                                                            size={12}
+                                                                            className="text-slate-300 group-hover:text-amber-400"
+                                                                        />
                                                                     )}
-                                                                    <span className={st.completed ? 'text-slate-400 line-through' : 'text-slate-600'}>
+                                                                    <span
+                                                                        className={
+                                                                            st.completed
+                                                                                ? 'text-slate-400 line-through'
+                                                                                : 'text-slate-600'
+                                                                        }
+                                                                    >
                                                                         {st.text}
                                                                     </span>
                                                                 </button>
@@ -486,10 +455,12 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
                                 >
                                     <option value="">Seleccionar paciente...</option>
                                     {patients
-                                        .filter(p => p.isActive !== false)
+                                        .filter((p) => p.isActive !== false)
                                         .sort((a, b) => a.name.localeCompare(b.name))
-                                        .map(p => (
-                                            <option key={p.id} value={p.id}>{p.name}</option>
+                                        .map((p) => (
+                                            <option key={p.id} value={p.id}>
+                                                {p.name}
+                                            </option>
                                         ))}
                                 </select>
                             </div>
@@ -508,7 +479,9 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
 
                             {/* Subtasks */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Subitems (opcional)</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    Subitems (opcional)
+                                </label>
                                 <div className="space-y-2">
                                     {newTask.subtasks.map((st, idx) => (
                                         <div key={idx} className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg">
@@ -584,7 +557,8 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
                         </div>
 
                         <div className="text-sm text-slate-500 mb-4">
-                            Paciente: <span className="font-medium text-slate-700">{getPatientName(editingTask.patientId)}</span>
+                            Paciente:{' '}
+                            <span className="font-medium text-slate-700">{getPatientName(editingTask.patientId)}</span>
                         </div>
 
                         <div className="space-y-4">
@@ -612,7 +586,9 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
                                             >
                                                 {st.completed ? '✓' : <Square size={14} />}
                                             </button>
-                                            <span className={`flex-1 text-sm ${st.completed ? 'text-slate-400 line-through' : 'text-slate-600'}`}>
+                                            <span
+                                                className={`flex-1 text-sm ${st.completed ? 'text-slate-400 line-through' : 'text-slate-600'}`}
+                                            >
                                                 {st.text}
                                             </span>
                                             <button
@@ -630,7 +606,9 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
                                             className="flex-1 p-2 border rounded-lg text-sm"
                                             value={editSubtask}
                                             onChange={(e) => setEditSubtask(e.target.value)}
-                                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addEditSubtask())}
+                                            onKeyPress={(e) =>
+                                                e.key === 'Enter' && (e.preventDefault(), addEditSubtask())
+                                            }
                                         />
                                         <button
                                             type="button"

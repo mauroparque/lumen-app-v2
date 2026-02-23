@@ -1,11 +1,13 @@
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { type ClassValue, clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs))
+    return twMerge(clsx(inputs));
 }
 
-export const formatPhoneNumber = (phone: string): string => {
+export const formatPhoneNumber = (phone: string | null | undefined): string => {
+    if (!phone) return '';
+
     // Remove all non-digit characters
     let cleaned = phone.replace(/\D/g, '');
 

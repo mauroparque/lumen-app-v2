@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { collection, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db, appId, CLINIC_ID } from '../lib/firebase';
-import { ClinicalNote, Appointment } from '../types';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useService } from '../context/ServiceContext';
+import { useData } from '../context/DataContext';
+import type { ClinicalNote, Appointment } from '../types';
 
 export interface Subtask {
     text: string;
@@ -16,92 +16,89 @@ export interface PendingTask {
     taskIndex: number;
     text: string;
     subtasks?: Subtask[];
-    createdAt: any;
+    createdAt: unknown;
     appointmentDate?: string;
 }
 
-export const usePendingTasks = (
-    appointments: Appointment[] = [],
-    myPatientIds?: Set<string>  // NEW: filter by patient IDs belonging to current professional
-) => {
-    const [pendingTasks, setPendingTasks] = useState<PendingTask[]>([]);
+export function usePendingTasks(appointments: Appointment[] = [], myPatientIds?: Set<string>) {
+    const service = useService();
+    const { patients } = useData();
+    const [allNotes, setAllNotes] = useState<ClinicalNote[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Function to mark a task as completed
-    const completeTask = async (noteId: string, taskIndex: number) => {
-        try {
-            const noteRef = doc(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'notes', noteId);
-            const noteSnap = await getDoc(noteRef);
+    const patientMap = useMemo(() => {
+        return new Map(patients.map((p) => [p.id, p]));
+    }, [patients]);
 
-            if (noteSnap.exists()) {
-                const noteData = noteSnap.data() as ClinicalNote;
-                const updatedTasks = [...(noteData.tasks || [])];
-
-                if (updatedTasks[taskIndex]) {
-                    updatedTasks[taskIndex].completed = true;
-                    await updateDoc(noteRef, { tasks: updatedTasks });
-                }
-            }
-        } catch (error) {
-            console.error('Error completing task:', error);
-            throw error;
-        }
-    };
+    const filteredPatientIds = useMemo(() => {
+        if (!myPatientIds) return null;
+        return myPatientIds;
+    }, [myPatientIds]);
 
     useEffect(() => {
-        const notesRef = collection(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'notes');
+        if (!service) {
+            setLoading(false);
+            return;
+        }
 
-        const unsubscribe = onSnapshot(notesRef, (snapshot) => {
-            const allPendingTasks: PendingTask[] = [];
-
-            snapshot.docs.forEach(docSnap => {
-                const data = docSnap.data() as ClinicalNote;
-
-                // Skip notes for patients not belonging to current professional
-                if (myPatientIds && !myPatientIds.has(data.patientId)) {
-                    return;
-                }
-
-                // Check if note has tasks with incomplete items
-                if (data.tasks && Array.isArray(data.tasks)) {
-                    // Find the appointment to get its date
-                    const appointment = appointments.find(a => a.id === data.appointmentId);
-
-                    data.tasks.forEach((task, index) => {
-                        if (!task.completed) {
-                            allPendingTasks.push({
-                                noteId: docSnap.id,
-                                appointmentId: data.appointmentId,
-                                patientId: data.patientId,
-                                taskIndex: index,
-                                text: task.text,
-                                subtasks: task.subtasks || [],
-                                createdAt: data.createdAt,
-                                appointmentDate: appointment?.date
-                            });
-                        }
-                    });
-                }
-            });
-
-            // Sort by appointment date (oldest first for priority)
-            allPendingTasks.sort((a, b) => {
-                // Try to sort by appointment date first
-                if (a.appointmentDate && b.appointmentDate) {
-                    return a.appointmentDate.localeCompare(b.appointmentDate);
-                }
-                // Otherwise sort by creation date
-                const dateA = a.createdAt?.toDate?.() || new Date(0);
-                const dateB = b.createdAt?.toDate?.() || new Date(0);
-                return dateA.getTime() - dateB.getTime();
-            });
-
-            setPendingTasks(allPendingTasks);
+        setLoading(true);
+        const unsub = service.subscribeToAllNotes((notes) => {
+            setAllNotes(notes);
             setLoading(false);
         });
 
-        return () => unsubscribe();
-    }, [appointments, myPatientIds]);
+        return unsub;
+    }, [service]);
+
+    const pendingTasks = useMemo(() => {
+        const tasks: PendingTask[] = [];
+
+        allNotes.forEach((note) => {
+            if (filteredPatientIds && !filteredPatientIds.has(note.patientId)) {
+                return;
+            }
+
+            if (note.tasks && Array.isArray(note.tasks)) {
+                const appointment = appointments.find((a) => a.id === note.appointmentId);
+                const patient = patientMap.get(note.patientId);
+
+                note.tasks.forEach((task, index) => {
+                    if (!task.completed) {
+                        tasks.push({
+                            noteId: note.id,
+                            appointmentId: note.appointmentId,
+                            patientId: note.patientId,
+                            patientName: patient?.name,
+                            taskIndex: index,
+                            text: task.text,
+                            subtasks: task.subtasks || [],
+                            createdAt: note.createdAt,
+                            appointmentDate: appointment?.date,
+                        });
+                    }
+                });
+            }
+        });
+
+        tasks.sort((a, b) => {
+            if (a.appointmentDate && b.appointmentDate) {
+                return a.appointmentDate.localeCompare(b.appointmentDate);
+            }
+            const dateA = (a.createdAt as unknown as { toDate?: () => Date })?.toDate?.() || new Date(0);
+            const dateB = (b.createdAt as unknown as { toDate?: () => Date })?.toDate?.() || new Date(0);
+            return dateA.getTime() - dateB.getTime();
+        });
+
+        return tasks;
+    }, [allNotes, appointments, filteredPatientIds, patientMap]);
+
+    const completeTask = useCallback(
+        async (noteId: string, taskIndex: number) => {
+            if (!service) throw new Error('Service not available');
+            return service.completeTask(noteId, taskIndex);
+        },
+        [service],
+    );
 
     return { pendingTasks, loading, completeTask };
-};
+}

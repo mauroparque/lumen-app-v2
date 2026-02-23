@@ -17,6 +17,8 @@ export default defineConfig({
                 // Ampliar incrementalmente al agregar tests para más módulos.
                 'src/lib/utils.ts',
                 'src/hooks/useAgendaStats.ts',
+                'src/hooks/usePsiquePayments.ts',
+                'src/hooks/usePendingTasks.ts',
             ],
             exclude: [
                 'src/test/**',

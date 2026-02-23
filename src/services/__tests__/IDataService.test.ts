@@ -160,6 +160,7 @@ describe('IDataService Mockability Demo', () => {
             'completeTask', 'addTask', 'updateTask', 'toggleSubtaskCompletion',
             'subscribeToPsiquePayments', 'markPsiquePaymentAsPaid',
             'subscribeToPatientAppointments', 'subscribeToPatientPayments',
+            'subscribeToStaffProfile', 'createStaffProfile', 'updateStaffProfile',
         ];
         for (const method of expectedMethods) {
             expect(service).toHaveProperty(method);

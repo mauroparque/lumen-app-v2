@@ -32,7 +32,7 @@ All shell commands executed by the agent **must** be validated through the Guard
 ### How to run a command
 
 ```bash
-python C:/Users/mauro/Desktop/Mau/Dev/tools/agent-guardrails-mcp/scripts/wrap_command.py "<command>"
+py C:/Users/mauro/Desktop/Mau/Dev/tools/agent-guardrails-mcp/scripts/wrap_command.py "<command>"
 ```
 
 ### Rules

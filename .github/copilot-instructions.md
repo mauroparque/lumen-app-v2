@@ -32,6 +32,36 @@ using-superpowers → brainstorming → writing-plans → subagent-driven-develo
 
 ---
 
+## Guardrail Command Validation — Mandatory
+
+All shell commands executed by the agent **must** be validated through the Guardrail MCP wrapper before execution. The wrapper validates the command against the active server rules and blocks forbidden operations automatically.
+
+### How to run a command
+
+```bash
+python C:/Users/mauro/Desktop/Mau/Dev/tools/agent-guardrails-mcp/scripts/wrap_command.py "<command>"
+```
+
+### Rules
+
+| Rule | Description |
+| ------ | ------------- |
+| **Never execute shell commands directly** | Always use the wrapper |
+| **If a command is blocked** | Report the reason — do NOT attempt to bypass or rewrite the command to avoid the guardrail |
+| **If the server is not running** | Start it first: `python C:/Users/mauro/Desktop/Mau/Dev/tools/agent-guardrails-mcp/scripts/start_server.py` |
+
+### Protected operation categories
+
+- `git` — force push, hard reset on shared branches, remote branch deletion, clean force
+- `bash` — `rm -rf` on system/home dirs, curl pipe sh, chmod 777
+- `database` — DROP DATABASE, TRUNCATE TABLE
+- `security` — credential exposure in shell
+- `deploy` — bare `firebase deploy` without `--only`
+
+> This is a **rigid rule**: no shortcuts, no exceptions.
+
+---
+
 ## Project Overview
 Mental-health clinic management PWA (React 18 + TypeScript + Vite + Firebase + TailwindCSS). Spanish-language domain: patients, appointments, payments, billing, clinical notes. Multi-professional support with per-professional data filtering.
 

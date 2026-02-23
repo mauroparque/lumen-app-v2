@@ -8,6 +8,7 @@ import type {
     PatientBillingData,
     ClinicalNote,
     TaskInput,
+    TaskSubitem,
     PsiquePayment,
 } from '../types';
 
@@ -52,6 +53,8 @@ export interface IDataService {
     subscribeToAllNotes(onData: (notes: ClinicalNote[]) => void): () => void;
     completeTask(noteId: string, taskIndex: number): Promise<void>;
     addTask(task: TaskInput): Promise<string>;
+    updateTask(noteId: string, taskIndex: number, data: { text: string; subtasks?: TaskSubitem[] }): Promise<void>;
+    toggleSubtaskCompletion(noteId: string, taskIndex: number, subtaskIndex: number): Promise<void>;
 
     // --- Psique Payments ---
     subscribeToPsiquePayments(

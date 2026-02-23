@@ -40,7 +40,7 @@ export function usePsiquePayments(
 
     const getDocKey = useCallback((month: string, professional?: string) => {
         if (professional) {
-            const safeName = professional.replace(/[\/\.#$\[\]]/g, '_');
+            const safeName = professional.replace(/[/.#$[\]]/g, '_');
             return `${month}_${safeName}`;
         }
         return month;

@@ -1,15 +1,13 @@
 import { useState, useMemo } from 'react';
 import { User } from 'firebase/auth';
 import { ListTodo, Plus, Search, Square, User as UserIcon, X, Save, Edit2 } from 'lucide-react';
-import { StaffProfile, ClinicalNote } from '../types';
+import { StaffProfile } from '../types';
 import { usePatients } from '../hooks/usePatients';
 import { useData } from '../context/DataContext';
 import { usePendingTasks, PendingTask } from '../hooks/usePendingTasks';
 import { useDataActions } from '../hooks/useDataActions';
 import { LoadingSpinner } from '../components/ui';
 import { toast } from 'sonner';
-import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
-import { db, appId, CLINIC_ID } from '../lib/firebase';
 
 interface TasksViewProps {
     user: User;
@@ -25,7 +23,7 @@ interface TaskFormData {
 export const TasksView = ({ user, profile }: TasksViewProps) => {
     const { patients, loading: loadingPatients } = usePatients(user);
     const { appointments } = useData();
-    const { addTask, updateNote } = useDataActions();
+    const { addTask, updateTask, toggleSubtaskCompletion } = useDataActions();
 
     // Create set of patient IDs for filtering tasks
     const myPatientIds = useMemo(() => new Set(patients.map((p) => p.id)), [patients]);
@@ -174,27 +172,13 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
         }
 
         try {
-            const noteRef = doc(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'notes', editingTask.noteId);
-            const noteSnap = await getDoc(noteRef);
-
-            if (noteSnap.exists()) {
-                const noteData = noteSnap.data() as ClinicalNote;
-                const updatedTasks = [...(noteData.tasks || [])];
-
-                if (updatedTasks[editingTask.taskIndex]) {
-                    updatedTasks[editingTask.taskIndex] = {
-                        ...updatedTasks[editingTask.taskIndex],
-                        text: editForm.text.trim(),
-                        subtasks: editForm.subtasks,
-                    };
-                    await updateNote(editingTask.noteId, {
-                        tasks: updatedTasks,
-                    });
-                    toast.success('Tarea actualizada');
-                    setEditingTask(null);
-                    setEditForm({ text: '', patientId: '', subtasks: [] });
-                }
-            }
+            await updateTask(editingTask.noteId, editingTask.taskIndex, {
+                text: editForm.text.trim(),
+                subtasks: editForm.subtasks,
+            });
+            toast.success('Tarea actualizada');
+            setEditingTask(null);
+            setEditForm({ text: '', patientId: '', subtasks: [] });
         } catch (error) {
             console.error('Error updating task:', error);
             toast.error('Error al actualizar la tarea');
@@ -227,32 +211,8 @@ export const TasksView = ({ user, profile }: TasksViewProps) => {
     // Toggle subtask completion directly from the list view
     const toggleSubtaskComplete = async (task: PendingTask, subtaskIndex: number) => {
         try {
-            const noteRef = doc(db, 'artifacts', appId, 'clinics', CLINIC_ID, 'notes', task.noteId);
-            const noteSnap = await getDoc(noteRef);
-
-            if (noteSnap.exists()) {
-                const noteData = noteSnap.data() as ClinicalNote;
-                const updatedTasks = [...(noteData.tasks || [])];
-
-                if (updatedTasks[task.taskIndex] && updatedTasks[task.taskIndex].subtasks) {
-                    const subtasks = [...(updatedTasks[task.taskIndex].subtasks || [])];
-                    if (subtasks[subtaskIndex]) {
-                        subtasks[subtaskIndex] = {
-                            ...subtasks[subtaskIndex],
-                            completed: !subtasks[subtaskIndex].completed,
-                        };
-                        updatedTasks[task.taskIndex] = {
-                            ...updatedTasks[task.taskIndex],
-                            subtasks,
-                        };
-                        await updateDoc(noteRef, {
-                            tasks: updatedTasks,
-                            updatedAt: Timestamp.now(),
-                        });
-                        toast.success(subtasks[subtaskIndex].completed ? 'Subitem completado' : 'Subitem pendiente');
-                    }
-                }
-            }
+            await toggleSubtaskCompletion(task.noteId, task.taskIndex, subtaskIndex);
+            toast.success('Subitem actualizado');
         } catch (error) {
             console.error('Error toggling subtask:', error);
             toast.error('Error al actualizar subitem');

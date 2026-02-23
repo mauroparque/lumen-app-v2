@@ -47,11 +47,12 @@ Auditoría
 Auditoría (misma)
   └── 2026-02-19_AUDIT.md  → hallazgos LINT-01, TSC-01, ARCH-01, HOOK-01, TEST-01
        │
-       ├── Plan
-       │    └── 2026-02-22-phase2-stability-dx-architecture.md  (14 tasks)
+       ├── Plans
+       │    ├── 2026-02-22-phase2-stability-dx-architecture.md  (plan principal, 14 tasks)
+       │    └── 2026-02-23-phase2-fixes.md                     (fixes post-evaluación, 11 tasks)
        │
-       └── Fixes
-            └── 2026-02-23-phase2-fixes.md  (11 tasks, correcciones post-evaluación)
+       └── Review
+            └── 2026-02-23_phase2-completion-review.md  ✓ COMPLETADA
 ```
 
 | Documento | Tipo | Fecha | Estado |
@@ -60,8 +61,9 @@ Auditoría (misma)
 | [2026-02-19-phase1-security.md](plans/2026-02-19-phase1-security.md) | Plan | 19/02/2026 | Ejecutado ✓ |
 | [2026-02-19-phase1-security-fixes.md](plans/2026-02-19-phase1-security-fixes.md) | Plan (fixes) | 19/02/2026 | Ejecutado ✓ |
 | [2026-02-22_phase1-completion-review.md](reviews/2026-02-22_phase1-completion-review.md) | Review | 22/02/2026 | Cerrado ✓ |
-| [2026-02-22-phase2-stability-dx-architecture.md](plans/2026-02-22-phase2-stability-dx-architecture.md) | Plan | 22/02/2026 | Pendiente |
-| [2026-02-23-phase2-fixes.md](plans/2026-02-23-phase2-fixes.md) | Plan (fixes) | 23/02/2026 | Pendiente |
+| [2026-02-22-phase2-stability-dx-architecture.md](plans/2026-02-22-phase2-stability-dx-architecture.md) | Plan | 22/02/2026 | Ejecutado ✓ |
+| [2026-02-23-phase2-fixes.md](plans/2026-02-23-phase2-fixes.md) | Plan (fixes) | 23/02/2026 | Ejecutado ✓ |
+| [2026-02-23_phase2-completion-review.md](reviews/2026-02-23_phase2-completion-review.md) | Review | 23/02/2026 | Cerrado ✓ |
 
 ---
 
@@ -80,8 +82,10 @@ Los hallazgos pendientes de la auditoría inicial están priorizados en el revie
 
 | Área | IDs | Próxima fase sugerida |
 | --- | --- | --- |
-| ~~Testing~~ | ~~TEST-01~~ | ~~Fase 2~~ → Plan creado |
-| ~~Arquitectura~~ | ~~ARCH-01, HOOK-01~~ | ~~Fase 2~~ → Plan creado |
-| ~~DX~~ | ~~LINT-01, TSC-01~~ | ~~Fase 2~~ → Plan creado |
+| ~~Testing~~ | ~~TEST-01~~ | ~~Fase 2~~ → Ejecutado ✓ (parcial — scope reducido, ver review) |
+| ~~Arquitectura~~ | ~~ARCH-01, HOOK-01~~ | ~~Fase 2~~ → Ejecutado ✓ |
+| ~~DX~~ | ~~LINT-01, TSC-01~~ | ~~Fase 2~~ → Ejecutado ✓ |
+| Coverage expansion | TEST-01 (continuación) | Fase 3 — expandir scope de coverage incrementalmente |
 | Performance | BUILD-01, DATA-01 | Fase 3 |
 | Accesibilidad | A11Y-01 | Fase 3 |
+| Lint cleanup | 7 errores pre-existentes | Fase 3 o chore independiente |

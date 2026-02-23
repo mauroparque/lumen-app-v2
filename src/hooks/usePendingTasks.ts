@@ -24,6 +24,7 @@ export function usePendingTasks(appointments: Appointment[] = [], myPatientIds?:
     const service = useService();
     const { patients } = useData();
     const [allNotes, setAllNotes] = useState<ClinicalNote[]>([]);
+    const [loading, setLoading] = useState(true);
 
     const patientMap = useMemo(() => {
         return new Map(patients.map((p) => [p.id, p]));
@@ -35,10 +36,15 @@ export function usePendingTasks(appointments: Appointment[] = [], myPatientIds?:
     }, [myPatientIds]);
 
     useEffect(() => {
-        if (!service) return;
+        if (!service) {
+            setLoading(false);
+            return;
+        }
 
+        setLoading(true);
         const unsub = service.subscribeToAllNotes((notes) => {
             setAllNotes(notes);
+            setLoading(false);
         });
 
         return unsub;
@@ -94,5 +100,5 @@ export function usePendingTasks(appointments: Appointment[] = [], myPatientIds?:
         [service],
     );
 
-    return { pendingTasks, loading: false, completeTask };
+    return { pendingTasks, loading, completeTask };
 }

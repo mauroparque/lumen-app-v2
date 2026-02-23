@@ -37,6 +37,7 @@ import type {
     PatientBillingData,
     ClinicalNote,
     TaskInput,
+    TaskSubitem,
     PsiquePayment,
 } from '../types';
 
@@ -428,6 +429,72 @@ export class FirebaseService implements IDataService {
             tasks: [{ text: task.content, completed: false }],
         });
         return docRef.id;
+    }
+
+    async updateTask(
+        noteId: string,
+        taskIndex: number,
+        data: { text: string; subtasks?: TaskSubitem[] },
+    ): Promise<void> {
+        const noteRef = doc(db, NOTES_COLLECTION, noteId);
+        const noteSnap = await getDoc(noteRef);
+
+        if (!noteSnap.exists()) {
+            throw new Error('Note not found');
+        }
+
+        const noteData = noteSnap.data() as ClinicalNote;
+        const updatedTasks = [...(noteData.tasks || [])];
+
+        if (!updatedTasks[taskIndex]) {
+            throw new Error(`Task at index ${taskIndex} not found`);
+        }
+
+        updatedTasks[taskIndex] = {
+            ...updatedTasks[taskIndex],
+            text: data.text,
+            subtasks: data.subtasks,
+        };
+
+        await updateDoc(noteRef, {
+            tasks: updatedTasks,
+            updatedAt: Timestamp.now(),
+        });
+    }
+
+    async toggleSubtaskCompletion(
+        noteId: string,
+        taskIndex: number,
+        subtaskIndex: number,
+    ): Promise<void> {
+        const noteRef = doc(db, NOTES_COLLECTION, noteId);
+        const noteSnap = await getDoc(noteRef);
+
+        if (!noteSnap.exists()) {
+            throw new Error('Note not found');
+        }
+
+        const noteData = noteSnap.data() as ClinicalNote;
+        const updatedTasks = [...(noteData.tasks || [])];
+
+        if (!updatedTasks[taskIndex]?.subtasks?.[subtaskIndex]) {
+            throw new Error(`Subtask at index ${subtaskIndex} not found`);
+        }
+
+        const subtasks = [...(updatedTasks[taskIndex].subtasks || [])];
+        subtasks[subtaskIndex] = {
+            ...subtasks[subtaskIndex],
+            completed: !subtasks[subtaskIndex].completed,
+        };
+        updatedTasks[taskIndex] = {
+            ...updatedTasks[taskIndex],
+            subtasks,
+        };
+
+        await updateDoc(noteRef, {
+            tasks: updatedTasks,
+            updatedAt: Timestamp.now(),
+        });
     }
 
     // --- Psique Payments ---

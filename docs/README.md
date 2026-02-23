@@ -55,6 +55,19 @@ Auditoría (misma)
             └── 2026-02-23_phase2-completion-review.md  ✓ COMPLETADA
 ```
 
+### Ciclo 3 — Testing & Cleanup (Feb 2026)
+
+```text
+Auditoría (misma)
+  └── 2026-02-19_AUDIT.md  → hallazgos TEST-01 (continuación), lint pre-existente, useStaff migration
+       │
+       ├── Plans
+       │    └── 2026-02-23-phase3-testing-cleanup.md  (plan principal, 21 tasks)
+       │
+       └── Review
+            └── (pendiente)
+```
+
 | Documento | Tipo | Fecha | Estado |
 | --- | --- | --- | --- |
 | [2026-02-19_AUDIT.md](audits/2026-02-19_AUDIT.md) | Auditoría | 19/02/2026 | Referencia base |
@@ -64,6 +77,7 @@ Auditoría (misma)
 | [2026-02-22-phase2-stability-dx-architecture.md](plans/2026-02-22-phase2-stability-dx-architecture.md) | Plan | 22/02/2026 | Ejecutado ✓ |
 | [2026-02-23-phase2-fixes.md](plans/2026-02-23-phase2-fixes.md) | Plan (fixes) | 23/02/2026 | Ejecutado ✓ |
 | [2026-02-23_phase2-completion-review.md](reviews/2026-02-23_phase2-completion-review.md) | Review | 23/02/2026 | Cerrado ✓ |
+| [2026-02-23-phase3-testing-cleanup.md](plans/2026-02-23-phase3-testing-cleanup.md) | Plan | 23/02/2026 | **En progreso** |
 
 ---
 
@@ -85,7 +99,9 @@ Los hallazgos pendientes de la auditoría inicial están priorizados en el revie
 | ~~Testing~~ | ~~TEST-01~~ | ~~Fase 2~~ → Ejecutado ✓ (parcial — scope reducido, ver review) |
 | ~~Arquitectura~~ | ~~ARCH-01, HOOK-01~~ | ~~Fase 2~~ → Ejecutado ✓ |
 | ~~DX~~ | ~~LINT-01, TSC-01~~ | ~~Fase 2~~ → Ejecutado ✓ |
-| Coverage expansion | TEST-01 (continuación) | Fase 3 — expandir scope de coverage incrementalmente |
-| Performance | BUILD-01, DATA-01 | Fase 3 |
-| Accesibilidad | A11Y-01 | Fase 3 |
-| Lint cleanup | 7 errores pre-existentes | Fase 3 o chore independiente |
+| Coverage expansion | TEST-01 (continuación) | Fase 3 — en progreso |
+| Lint cleanup | 7 errores pre-existentes | Fase 3 — en progreso |
+| useStaff migration | ARCH-01 (remanente) | Fase 3 — en progreso |
+| Performance | BUILD-01, DATA-01 | Fase 4 |
+| Accesibilidad | A11Y-01 | Fase 4 |
+| useBillingStatus migration | ARCH-01 (remanente) | Fase 4 |

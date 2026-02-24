@@ -14,6 +14,8 @@
 
 **Review de cierre:** (pendiente)
 
+**Plan de fixes:** [`docs/plans/2026-02-24-phase3-fixes.md`](2026-02-24-phase3-fixes.md)
+
 ---
 
 ## Resumen de tasks

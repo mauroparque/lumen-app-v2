@@ -62,7 +62,8 @@ Auditoría (misma)
   └── 2026-02-19_AUDIT.md  → hallazgos TEST-01 (continuación), lint pre-existente, useStaff migration
        │
        ├── Plans
-       │    └── 2026-02-23-phase3-testing-cleanup.md  (plan principal, 21 tasks)
+       │    ├── 2026-02-23-phase3-testing-cleanup.md  (plan principal, 21 tasks)
+       │    └── 2026-02-24-phase3-fixes.md             (fixes post code-review, 6 tasks)
        │
        └── Review
             └── (pendiente)
@@ -78,6 +79,7 @@ Auditoría (misma)
 | [2026-02-23-phase2-fixes.md](plans/2026-02-23-phase2-fixes.md) | Plan (fixes) | 23/02/2026 | Ejecutado ✓ |
 | [2026-02-23_phase2-completion-review.md](reviews/2026-02-23_phase2-completion-review.md) | Review | 23/02/2026 | Cerrado ✓ |
 | [2026-02-23-phase3-testing-cleanup.md](plans/2026-02-23-phase3-testing-cleanup.md) | Plan | 23/02/2026 | **En progreso** |
+| [2026-02-24-phase3-fixes.md](plans/2026-02-24-phase3-fixes.md) | Plan (fixes) | 24/02/2026 | Pendiente |
 
 ---
 

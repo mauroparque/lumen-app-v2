@@ -65,7 +65,7 @@ describe('calculatePsiqueMonthData', () => {
         expect(result.totalAmount).toBe(0);
     });
 
-    it('excludes cancelled appointments', () => {
+    it('excludes cancelled appointments without chargeOnCancellation', () => {
         const psiqueIds = new Set(['p-1']);
         const appointments = [
             makeAppointment({
@@ -79,6 +79,23 @@ describe('calculatePsiqueMonthData', () => {
         );
 
         expect(result.totalAmount).toBe(0);
+    });
+
+    it('includes cancelled appointments with chargeOnCancellation when paid', () => {
+        const psiqueIds = new Set(['p-1']);
+        const appointments = [
+            makeAppointment({
+                patientId: 'p-1', date: '2026-02-10', isPaid: true,
+                status: 'cancelado', chargeOnCancellation: true, price: 10000,
+            }),
+        ];
+
+        const result = calculatePsiqueMonthData(
+            appointments, psiqueIds, selectedMonth, emptyPayments,
+        );
+
+        expect(result.totalAmount).toBe(2500);
+        expect(result.patientBreakdown).toHaveLength(1);
     });
 
     it('respects excludeFromPsique flag on individual appointments', () => {

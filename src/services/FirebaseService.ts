@@ -594,7 +594,7 @@ export class FirebaseService implements IDataService {
 
     async createStaffProfile(uid: string, profile: StaffProfile): Promise<void> {
         const docRef = doc(db, STAFF_COLLECTION, uid);
-        await setDoc(docRef, profile);
+        await setDoc(docRef, { ...profile, uid });
     }
 
     async updateStaffProfile(uid: string, data: Partial<StaffProfile>): Promise<void> {

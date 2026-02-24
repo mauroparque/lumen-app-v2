@@ -42,7 +42,8 @@ export function calculatePsiqueMonthData(
     const monthStr = `${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth() + 1).padStart(2, '0')}`;
 
     const psiqueAppointments = appointments.filter((a) => {
-        if (!a.isPaid || a.status === 'cancelado') return false;
+        if (!a.isPaid) return false;
+        if (a.status === 'cancelado' && !a.chargeOnCancellation) return false;
         if (!psiquePatientIds.has(a.patientId)) return false;
         if (a.excludeFromPsique) return false;
         return a.date.startsWith(monthStr);

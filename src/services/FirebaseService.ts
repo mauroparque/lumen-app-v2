@@ -25,6 +25,7 @@ import {
     BILLING_QUEUE_COLLECTION,
     NOTES_COLLECTION,
     PSIQUE_PAYMENTS_COLLECTION,
+    STAFF_COLLECTION,
 } from '../lib/routes';
 import { IDataService } from './IDataService';
 import type {
@@ -574,7 +575,7 @@ export class FirebaseService implements IDataService {
 
     // --- Staff ---
     subscribeToStaffProfile(uid: string, onData: (profile: StaffProfile | null) => void): () => void {
-        const docRef = doc(db, 'staff', uid);
+        const docRef = doc(db, STAFF_COLLECTION, uid);
         return onSnapshot(
             docRef,
             (docSnap) => {
@@ -592,12 +593,12 @@ export class FirebaseService implements IDataService {
     }
 
     async createStaffProfile(uid: string, profile: StaffProfile): Promise<void> {
-        const docRef = doc(db, 'staff', uid);
+        const docRef = doc(db, STAFF_COLLECTION, uid);
         await setDoc(docRef, profile);
     }
 
     async updateStaffProfile(uid: string, data: Partial<StaffProfile>): Promise<void> {
-        const docRef = doc(db, 'staff', uid);
+        const docRef = doc(db, STAFF_COLLECTION, uid);
         await setDoc(docRef, data, { merge: true });
     }
 }

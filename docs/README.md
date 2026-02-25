@@ -63,10 +63,10 @@ Auditoría (misma)
        │
        ├── Plans
        │    ├── 2026-02-23-phase3-testing-cleanup.md  (plan principal, 21 tasks)
-       │    └── 2026-02-24-phase3-fixes.md             (fixes post code-review, 6 tasks)
+       │    └── 2026-02-24-phase3-fixes.md             (fixes post code-review, 3 items)
        │
        └── Review
-            └── (pendiente)
+            └── 2026-02-24_phase3-completion-review.md  ✓ COMPLETADA
 ```
 
 | Documento | Tipo | Fecha | Estado |
@@ -78,8 +78,9 @@ Auditoría (misma)
 | [2026-02-22-phase2-stability-dx-architecture.md](plans/2026-02-22-phase2-stability-dx-architecture.md) | Plan | 22/02/2026 | Ejecutado ✓ |
 | [2026-02-23-phase2-fixes.md](plans/2026-02-23-phase2-fixes.md) | Plan (fixes) | 23/02/2026 | Ejecutado ✓ |
 | [2026-02-23_phase2-completion-review.md](reviews/2026-02-23_phase2-completion-review.md) | Review | 23/02/2026 | Cerrado ✓ |
-| [2026-02-23-phase3-testing-cleanup.md](plans/2026-02-23-phase3-testing-cleanup.md) | Plan | 23/02/2026 | **En progreso** |
-| [2026-02-24-phase3-fixes.md](plans/2026-02-24-phase3-fixes.md) | Plan (fixes) | 24/02/2026 | Pendiente |
+| [2026-02-23-phase3-testing-cleanup.md](plans/2026-02-23-phase3-testing-cleanup.md) | Plan | 23/02/2026 | Ejecutado ✓ |
+| [2026-02-24-phase3-fixes.md](plans/2026-02-24-phase3-fixes.md) | Plan (fixes) | 24/02/2026 | Ejecutado ✓ |
+| [2026-02-24_phase3-completion-review.md](reviews/2026-02-24_phase3-completion-review.md) | Review | 24/02/2026 | Cerrado ✓ |
 
 ---
 
@@ -93,17 +94,18 @@ Auditoría (misma)
 
 ## Deuda técnica abierta
 
-Los hallazgos pendientes de la auditoría inicial están priorizados en el review de cierre de Fase 1:
-→ [2026-02-22_phase1-completion-review.md — Deuda técnica pendiente](reviews/2026-02-22_phase1-completion-review.md#deuda-técnica-pendiente-fuera-del-scope-de-fase-1)
+Deuda actualizada tras cierre de Fase 3:
+→ [2026-02-24_phase3-completion-review.md — Deuda técnica pendiente](reviews/2026-02-24_phase3-completion-review.md#deuda-técnica-pendiente)
 
-| Área | IDs | Próxima fase sugerida |
+| Área | IDs | Estado |
 | --- | --- | --- |
-| ~~Testing~~ | ~~TEST-01~~ | ~~Fase 2~~ → Ejecutado ✓ (parcial — scope reducido, ver review) |
+| ~~Testing~~ | ~~TEST-01~~ | ~~Fase 2~~ → Ejecutado ✓ (parcial) |
 | ~~Arquitectura~~ | ~~ARCH-01, HOOK-01~~ | ~~Fase 2~~ → Ejecutado ✓ |
 | ~~DX~~ | ~~LINT-01, TSC-01~~ | ~~Fase 2~~ → Ejecutado ✓ |
-| Coverage expansion | TEST-01 (continuación) | Fase 3 — en progreso |
-| Lint cleanup | 7 errores pre-existentes | Fase 3 — en progreso |
-| useStaff migration | ARCH-01 (remanente) | Fase 3 — en progreso |
+| ~~Coverage expansion~~ | ~~TEST-01 (cont.)~~ | ~~Fase 3~~ → Ejecutado ✓ (4 archivos en scope) |
+| ~~Lint cleanup~~ | ~~7 errores pre-existentes~~ | ~~Fase 3~~ → Ejecutado ✓ (0 errors) |
+| useStaff migration | ARCH-01 (remanente) | Fase 3 → parcial (interface lista, hook pendiente) → Fase 4 |
+| useBillingStatus migration | ARCH-01 (remanente) | Fase 4 |
 | Performance | BUILD-01, DATA-01 | Fase 4 |
 | Accesibilidad | A11Y-01 | Fase 4 |
-| useBillingStatus migration | ARCH-01 (remanente) | Fase 4 |
+| FirebaseService tests | TEST-01 (remanente) | Fase 4 |

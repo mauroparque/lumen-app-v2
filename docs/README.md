@@ -96,6 +96,7 @@ Auditoría (misma)
 | [2026-02-24_phase3-completion-review.md](reviews/2026-02-24_phase3-completion-review.md) | Review | 24/02/2026 | Cerrado ✓ |
 | [2026-02-25-phase4-performance-a11y-services.md](plans/2026-02-25-phase4-performance-a11y-services.md) | Plan | 25/02/2026 | Ejecutado ✓ |
 | [2026-02-26_phase4-completion-review.md](reviews/2026-02-26_phase4-completion-review.md) | Review | 26/02/2026 | Cerrado ✓ |
+| [2026-02-26_AUDIT.md](audits/2026-02-26_AUDIT.md) | Auditoría | 26/02/2026 | Referencia actual (post-4 fases) |
 
 ---
 
@@ -126,3 +127,5 @@ Deuda actualizada tras cierre de Fase 3:
 | ~~FirebaseService tests~~ | ~~TEST-01 (remanente)~~ | ~~Fase 4~~ → Ejecutado ✓ |
 
 **Todos los hallazgos de la auditoría original han sido resueltos.**
+
+→ Nueva auditoría post-4 fases: [2026-02-26_AUDIT.md](audits/2026-02-26_AUDIT.md) — Score **B+** con 26 hallazgos nuevos de severidad media-baja.

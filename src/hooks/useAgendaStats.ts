@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { Appointment, Patient } from '../types';
+import { PSIQUE_RATE } from '../lib/psiqueCalculations';
 
 const PERIOD_MONTHS = 3;
-const PSIQUE_RATE = 0.25;
 
 export interface PatientStats {
     patientId: string;
@@ -69,7 +69,6 @@ export const useAgendaStats = (appointments: Appointment[], patients: Patient[])
         const sessionsByPatient: Record<string, { count: number; revenue: number }> = {};
 
         periodAppointments.forEach((appt) => {
-
             // Consider an appointment as "completed" if status is completado/presente OR if it's paid
             const isCompleted = appt.status === 'completado' || appt.status === 'presente' || appt.isPaid;
 

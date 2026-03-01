@@ -9,20 +9,21 @@
 **Tech Stack:** Firebase Firestore rules, Firebase Storage rules, Cloud Functions v1/v2, TypeScript, Vitest.
 
 **Auditoría de origen:** [`docs/audits/2026-02-26_AUDIT.md`](../audits/2026-02-26_AUDIT.md)  
-**Auditoría base:** [`docs/audits/2026-02-19_AUDIT.md`](../audits/2026-02-19_AUDIT.md)
+**Auditoría base:** [`docs/audits/2026-02-19_AUDIT.md`](../audits/2026-02-19_AUDIT.md)  
+**Review de cierre:** [`docs/reviews/2026-03-01_phase5-completion-review.md`](../reviews/2026-03-01_phase5-completion-review.md)
 
 ---
 
 ## Resumen de acciones
 
-| # | Acción | Issue | Esfuerzo est. |
-| --- | --- | --- | --- |
-| 1 | Restringir `psiquePayments` a admin en Firestore rules | SEC-N01 | 15 min |
-| 2 | Agregar límites de tamaño y MIME type en `storage.rules` | SEC-07 | 15 min |
-| 3 | Sanitizar `data` en `triggerInvoiceGeneration` (whitelist de campos) | SEC-N02 | 30 min |
-| 4 | Eliminar `deletePayment` de `IDataService`, `FirebaseService`, `useDataActions` y tests | ARCH-N01 | 30 min |
-| 5 | Fix `addPayment` para respetar `date` del input | ARCH-N02 | 15 min |
-| 6 | Implementar rate limiting y App Check en `validateTurnstile` | SEC-N03 | 1-2h |
+| #   | Acción                                                                                  | Issue    | Esfuerzo est. |
+| --- | --------------------------------------------------------------------------------------- | -------- | ------------- |
+| 1   | Restringir `psiquePayments` a admin en Firestore rules                                  | SEC-N01  | 15 min        |
+| 2   | Agregar límites de tamaño y MIME type en `storage.rules`                                | SEC-07   | 15 min        |
+| 3   | Sanitizar `data` en `triggerInvoiceGeneration` (whitelist de campos)                    | SEC-N02  | 30 min        |
+| 4   | Eliminar `deletePayment` de `IDataService`, `FirebaseService`, `useDataActions` y tests | ARCH-N01 | 30 min        |
+| 5   | Fix `addPayment` para respetar `date` del input                                         | ARCH-N02 | 15 min        |
+| 6   | Implementar rate limiting y App Check en `validateTurnstile`                            | SEC-N03  | 1-2h          |
 
 **Esfuerzo total estimado:** ~3h
 
@@ -33,11 +34,13 @@
 **Contexto:** La colección `psiquePayments` actualmente tiene `allow read, write: if isAuthenticated()` — cualquier usuario autenticado puede leer/modificar datos de facturación Psique de cualquier profesional. Debería requerir `isAdmin()` para escritura y restringir lectura por admin o profesional propio.
 
 **Files:**
+
 - Modify: `firestore.rules` L79-81
 
 **Step 1: Verificar el estado actual de las reglas**
 
 Confirmar que la regla actual es:
+
 ```
 match /psiquePayments/{monthId} {
   allow read, write: if isAuthenticated();
@@ -76,11 +79,13 @@ git commit -m "fix(security): restrict psiquePayments write to admin only (SEC-N
 **Contexto:** `storage.rules` solo verifica `request.auth != null`. Sin validación de tamaño ni tipo de archivo, un usuario autenticado podría subir archivos arbitrariamente grandes o ejecutables.
 
 **Files:**
+
 - Modify: `storage.rules`
 
 **Step 1: Verificar el estado actual**
 
 Confirmar que la regla es:
+
 ```
 match /patients/{patientId}/attachments/{allPaths=**} {
   allow read, write: if request.auth != null;
@@ -107,6 +112,7 @@ service firebase.storage {
 ```
 
 **MIME types permitidos:**
+
 - `image/*` — fotos, escaneos, capturas
 - `application/pdf` — informes, derivaciones
 - `application/msword` — documentos Word legacy
@@ -132,6 +138,7 @@ git commit -m "fix(security): add file size limit (10MB) and MIME type validatio
 **Contexto:** La Cloud Function `triggerInvoiceGeneration` hace `...data` spread, reenviando todos los campos del documento de billing queue al webhook de n8n sin sanitizar. Un documento con campos inyectados (e.g., un campo `headers` o `url`) se reenviaría al webhook.
 
 **Files:**
+
 - Modify: `functions/src/index.ts` L57-90
 
 **Step 1: Identificar los campos legítimos del billing queue**
@@ -139,6 +146,7 @@ git commit -m "fix(security): add file size limit (10MB) and MIME type validatio
 Revisar `requestBatchInvoice` en `FirebaseService.ts` para determinar los campos que se escriben al crear un documento en la billing queue:
 
 Campos esperados:
+
 - `type` (string: `'batch'`)
 - `appointmentIds` (string[])
 - `patientId` (string)
@@ -157,20 +165,20 @@ Reemplazar el spread `...data` con extracción explícita de campos permitidos:
 
 ```typescript
 export const triggerInvoiceGeneration = functions.firestore
-    .document("artifacts/{appId}/clinics/{clinicId}/integrations/billing/queue/{docId}")
+    .document('artifacts/{appId}/clinics/{clinicId}/integrations/billing/queue/{docId}')
     .onCreate(async (snap, context) => {
         const data = snap.data();
         const { docId } = context.params;
 
         // 1. Validar estado inicial
-        if (data.status !== "pending") return null;
+        if (data.status !== 'pending') return null;
 
         // 2. Obtener configuración
         const config = (functions.config as any)().billing;
 
         if (!config || !config.url || !config.secret) {
-            console.error("Falta configuración de billing (url o secret)");
-            return snap.ref.update({ status: "error_config" });
+            console.error('Falta configuración de billing (url o secret)');
+            return snap.ref.update({ status: 'error_config' });
         }
 
         // 3. Sanitizar: solo campos permitidos del billing queue
@@ -190,24 +198,27 @@ export const triggerInvoiceGeneration = functions.firestore
 
         try {
             // 4. Marcar como procesando
-            await snap.ref.update({ status: "processing" });
+            await snap.ref.update({ status: 'processing' });
 
             // 5. Enviar a n8n con Header de Seguridad — solo campos sanitizados
-            await axios.post(config.url, {
-                queueDocId: docId,
-                ...allowedFields
-            }, {
-                headers: { "x-lumen-secret": config.secret }
-            });
+            await axios.post(
+                config.url,
+                {
+                    queueDocId: docId,
+                    ...allowedFields,
+                },
+                {
+                    headers: { 'x-lumen-secret': config.secret },
+                },
+            );
 
             console.log(`Solicitud enviada a n8n para docId: ${docId}`);
             return null;
-
         } catch (error: any) {
-            console.error("Error enviando a n8n:", error.message);
+            console.error('Error enviando a n8n:', error.message);
             return snap.ref.update({
-                status: "error_sending",
-                debugError: error.message
+                status: 'error_sending',
+                debugError: error.message,
             });
         }
     });
@@ -232,6 +243,7 @@ git commit -m "fix(security): sanitize billing queue data with field whitelist b
 **Contexto:** `deletePayment` existe en `IDataService`, `FirebaseService`, `useDataActions` y tests, pero Firestore rules lo bloquean con `allow delete: if false`. Es código muerto que genera una falsa expectativa. Se debe eliminar de toda la cadena.
 
 **Files afectados (5):**
+
 - Modify: `src/services/IDataService.ts` — eliminar declaración L41
 - Modify: `src/services/FirebaseService.ts` — eliminar implementación L277-279
 - Modify: `src/hooks/useDataActions.ts` — eliminar rama `'payments'` del switch L52 y tipo del union
@@ -241,6 +253,7 @@ git commit -m "fix(security): sanitize billing queue data with field whitelist b
 **Step 1: Eliminar de `IDataService.ts`**
 
 Eliminar la línea:
+
 ```typescript
     deletePayment(id: string): Promise<void>;
 ```
@@ -248,6 +261,7 @@ Eliminar la línea:
 **Step 2: Eliminar de `FirebaseService.ts`**
 
 Eliminar el método:
+
 ```typescript
     async deletePayment(id: string): Promise<void> {
         const docRef = doc(db, PAYMENTS_COLLECTION, id);
@@ -262,15 +276,15 @@ Verificar si `deleteDoc` queda sin otros usos en el archivo. Si solo se usaba pa
 Cambiar el tipo del parámetro `collectionName` de `deleteItem` para excluir `'payments'`:
 
 ```typescript
-    const deleteItem = async (collectionName: 'patients' | 'appointments', id: string) => {
-        const s = ensureService();
-        if (collectionName === 'patients') {
-            return s.deletePatient(id);
-        } else if (collectionName === 'appointments') {
-            return s.deleteAppointment(id);
-        }
-        throw new Error(`Unknown collection: ${collectionName}`);
-    };
+const deleteItem = async (collectionName: 'patients' | 'appointments', id: string) => {
+    const s = ensureService();
+    if (collectionName === 'patients') {
+        return s.deletePatient(id);
+    } else if (collectionName === 'appointments') {
+        return s.deleteAppointment(id);
+    }
+    throw new Error(`Unknown collection: ${collectionName}`);
+};
 ```
 
 **Step 4: Actualizar `IDataService.test.ts`**
@@ -282,6 +296,7 @@ Cambiar el tipo del parámetro `collectionName` de `deleteItem` para excluir `'p
 **Step 5: Actualizar `FirebaseService.test.ts`**
 
 Eliminar o modificar el test en L835:
+
 ```typescript
     it('deletePayment y updatePayment delegan en deleteDoc/updateDoc', async () => {
 ```
@@ -312,11 +327,13 @@ git commit -m "refactor(arch): remove dead deletePayment from service layer — 
 **Decisión de diseño:** Usar el `date` del input si se proporciona y es un Timestamp válido; usar `Timestamp.now()` como fallback si es `null` o no se envía.
 
 **Files:**
+
 - Modify: `src/services/FirebaseService.ts` L258-275
 
 **Step 1: Reemplazar la implementación de `addPayment`**
 
 De:
+
 ```typescript
     async addPayment(payment: PaymentInput, appointmentId?: string): Promise<string> {
         const batch = writeBatch(db);
@@ -330,6 +347,7 @@ De:
 ```
 
 A:
+
 ```typescript
     async addPayment(payment: PaymentInput, appointmentId?: string): Promise<string> {
         const batch = writeBatch(db);
@@ -352,38 +370,35 @@ Expected: Todos los tests pasan
 En `src/services/__tests__/FirebaseService.test.ts`, buscar el bloque de tests de `addPayment` y agregar:
 
 ```typescript
-    it('addPayment respeta date del input si es un Timestamp', async () => {
-        const customDate = Timestamp.fromDate(new Date('2026-01-15'));
-        const payment: PaymentInput = {
-            patientName: 'Test Patient',
-            amount: 5000,
-            concept: 'Consulta',
-            date: customDate,
-        };
+it('addPayment respeta date del input si es un Timestamp', async () => {
+    const customDate = Timestamp.fromDate(new Date('2026-01-15'));
+    const payment: PaymentInput = {
+        patientName: 'Test Patient',
+        amount: 5000,
+        concept: 'Consulta',
+        date: customDate,
+    };
 
-        await service.addPayment(payment);
+    await service.addPayment(payment);
 
-        expect(writeBatch(db).set).toHaveBeenCalledWith(
-            expect.anything(),
-            expect.objectContaining({ date: customDate })
-        );
-    });
+    expect(writeBatch(db).set).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ date: customDate }));
+});
 
-    it('addPayment usa Timestamp.now() si date es null', async () => {
-        const payment: PaymentInput = {
-            patientName: 'Test Patient',
-            amount: 5000,
-            concept: 'Consulta',
-            date: null,
-        };
+it('addPayment usa Timestamp.now() si date es null', async () => {
+    const payment: PaymentInput = {
+        patientName: 'Test Patient',
+        amount: 5000,
+        concept: 'Consulta',
+        date: null,
+    };
 
-        await service.addPayment(payment);
+    await service.addPayment(payment);
 
-        expect(writeBatch(db).set).toHaveBeenCalledWith(
-            expect.anything(),
-            expect.objectContaining({ date: expect.any(Object) })
-        );
-    });
+    expect(writeBatch(db).set).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ date: expect.any(Object) }),
+    );
+});
 ```
 
 **Step 4: Ejecutar tests**
@@ -405,6 +420,7 @@ git commit -m "fix(arch): respect date from PaymentInput in addPayment, fallback
 **Contexto:** La Cloud Function `validateTurnstile` no tiene rate limiting ni App Check habilitado (`enforceAppCheck: false`). Un atacante podría llamarla masivamente consumiendo la cuota de verificaciones de Cloudflare Turnstile.
 
 **Files:**
+
 - Modify: `functions/src/index.ts` L8-45
 
 ### Parte A: Habilitar App Check
@@ -458,7 +474,7 @@ Agregar un rate limiter simple basado en IP usando un Map en memoria. Esto funci
 // Rate limiting in-memory (por instancia de CF)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minuto
-const RATE_LIMIT_MAX_REQUESTS = 5;   // 5 intentos por minuto por IP
+const RATE_LIMIT_MAX_REQUESTS = 5; // 5 intentos por minuto por IP
 
 function checkRateLimit(ip: string): boolean {
     const now = Date.now();
@@ -483,19 +499,19 @@ function checkRateLimit(ip: string): boolean {
 ```typescript
 export const validateTurnstile = onCall(
     {
-        enforceAppCheck: true,  // o false si App Check no está configurado aún
-        secrets: ["TURNSTILE_SECRET"],
+        enforceAppCheck: true, // o false si App Check no está configurado aún
+        secrets: ['TURNSTILE_SECRET'],
     },
     async (request) => {
         // Rate limiting por IP
         const ip = request.rawRequest?.ip || 'unknown';
         if (!checkRateLimit(ip)) {
-            throw new HttpsError("resource-exhausted", "Too many requests. Try again later.");
+            throw new HttpsError('resource-exhausted', 'Too many requests. Try again later.');
         }
 
         const token = request.data?.token;
         // ... resto igual ...
-    }
+    },
 );
 ```
 
@@ -507,6 +523,7 @@ Expected: Build exitoso
 **Step 6: Decisión de despliegue de App Check**
 
 Si App Check no está configurado en Firebase Console:
+
 - Dejar `enforceAppCheck: false` por ahora
 - Agregar comentario `// TODO: enable after configuring App Check in Firebase Console`
 - El rate limiting funciona independientemente de App Check
@@ -574,11 +591,11 @@ git tag -a v1.2.0 -m "Phase 5: High-priority security and architecture fixes (SE
 
 ## Resumen de hallazgos abordados
 
-| Issue | Descripción | Task |
-| --- | --- | --- |
-| SEC-N01 | `psiquePayments` sin RBAC | Task 1 |
-| SEC-07 | Storage rules sin límites | Task 2 |
-| SEC-N02 | `triggerInvoiceGeneration` sin sanitización | Task 3 |
-| ARCH-N01 | `deletePayment` código muerto | Task 4 |
-| ARCH-N02 | `addPayment` descarta `date` del input | Task 5 |
-| SEC-N03 | `validateTurnstile` sin rate limiting ni App Check | Task 6 |
+| Issue    | Descripción                                        | Task   |
+| -------- | -------------------------------------------------- | ------ |
+| SEC-N01  | `psiquePayments` sin RBAC                          | Task 1 |
+| SEC-07   | Storage rules sin límites                          | Task 2 |
+| SEC-N02  | `triggerInvoiceGeneration` sin sanitización        | Task 3 |
+| ARCH-N01 | `deletePayment` código muerto                      | Task 4 |
+| ARCH-N02 | `addPayment` descarta `date` del input             | Task 5 |
+| SEC-N03  | `validateTurnstile` sin rate limiting ni App Check | Task 6 |

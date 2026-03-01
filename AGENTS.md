@@ -6,42 +6,47 @@ This file contains guidelines and commands for agentic coding tools working in t
 
 ## Agent Skills — Mandatory Usage
 
-This project uses a **skills** system located in `.agents/skills/`. The master index with descriptions, when to use each skill, and how they relate to each other is at [.agents/skills/SKILLS_INDEX.md](.agents/skills/SKILLS_INDEX.md). **Read it before any non-trivial action.**
+This project uses a **skills** system located in `.agents/skills/`. All skills are listed with routing signals and paths in [.agents/skills/SKILLS_INDEX.md](.agents/skills/SKILLS_INDEX.md).
 
-| Situation | Required skills |
-| --- | --- |
-| Start of any conversation | `using-superpowers` |
-| Creating features, components, or modifying behavior | `brainstorming` → `writing-plans` |
-| Executing a multi-step plan in the current session | `subagent-driven-development` |
-| Implementing any feature or bugfix | `test-driven-development` |
-| Any technical problem (bug, test failure, build error) | `systematic-debugging` |
-| Before claiming work is complete | `verification-before-completion` |
-| After completing a feature or before merging | `requesting-code-review` |
-| Building or reviewing UI components | `frontend-design` + `vercel-react-best-practices` |
-| Generating changelogs or release notes | `changelog-automation` |
+### Rules
 
-> **Rigid skills** (TDD, debugging, verification): follow strictly, no shortcuts.
-> **Flexible skills** (frontend patterns, design): adapt to the project context.
+1. **Read `using-superpowers`** at the start of every conversation — it is the only mandatory skill.
+2. **Consult SKILLS_INDEX.md** to find skills matching your current task. The index has a signal→skill routing table — scan it and load all matching skills before acting.
+3. Skills cover process (planning, debugging, TDD), technology (vitest, playwright, firebase, tailwind, vite), and quality (code review, verification). Don't limit yourself to process skills — load technology-specific skills when the task involves those technologies.
+4. **Rigid skills** (TDD, debugging, verification): follow strictly. **Flexible skills** (frontend patterns, design, tools): adapt to context.
 
 ---
 
 ## Guardrail Command Validation — Mandatory
 
-All shell commands executed by the agent **must** be validated through the Guardrail MCP wrapper before execution. The wrapper validates the command against the active server rules and blocks forbidden operations automatically.
+All shell commands executed by the agent **must** be validated before execution. The validation mechanism depends on the agent context:
 
-### How to run a command
+### VS Code Copilot / OpenCode (MCP tools available)
+
+Use the MCP tools directly — no Python wrapper needed:
+
+1. Call `mcp_guardrail-mcp_guardrail_init_session` at the start of every conversation.
+2. Call `mcp_guardrail-mcp_guardrail_validate_bash` with the command and `session_token` before every terminal command.
+3. If `valid: true` → execute. If blocked → report, do not bypass.
+
+### Claude Code (no MCP tools)
+
+Use the Python wrapper, which calls the Web API (port 8096) and executes the command if safe:
 
 ```bash
-py C:/Users/mauro/Desktop/Mau/Dev/tools/agent-guardrails-mcp/scripts/wrap_command.py "<command>"
+/home/mauro/tools/agent-guardrails-mcp/.venv/bin/python3 /home/mauro/tools/agent-guardrails-mcp/scripts/wrap_command.py -- "<command>"
 ```
 
-### Rules
+### Rules (both contexts)
 
-| Rule | Description |
-| ------ | ------------- |
-| **Never execute shell commands directly** | Always use the wrapper |
-| **If a command is blocked** | Report the reason — do NOT attempt to bypass or rewrite the command to avoid the guardrail |
-| **If the server is not running** | Start it first: `py C:/Users/mauro/Desktop/Mau/Dev/tools/agent-guardrails-mcp/scripts/start_server.py` |
+| Rule                             | Description                                                                                                                                                |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Initialize session**           | At the start of every conversation obtain a `session_token` via `init_session` (MCP) or implicitly via the wrapper                                         |
+| **Obtain session token**         | Do NOT execute ANY terminal commands or file edits without first obtaining a `session_token`                                                               |
+| **Use session token**            | Use the obtained token in all subsequent calls to validation tools                                                                                         |
+| **Validate before execute**      | Always validate before running any shell command                                                                                                           |
+| **If a command is blocked**      | Report the reason — do NOT attempt to bypass or rewrite the command to avoid the guardrail                                                                 |
+| **If the server is not running** | Start it: `/home/mauro/tools/agent-guardrails-mcp/.venv/bin/python3 /home/mauro/tools/agent-guardrails-mcp/scripts/start_server.py` (wraps Docker Compose) |
 
 ### Protected operation categories
 

@@ -75,8 +75,16 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
         let loadedFlags = { patients: false, myAppointments: false, allAppointments: false, payments: false };
 
+        // Timeout de seguridad: si alguna suscripción falla y nunca llama su callback,
+        // la UI quedaría bloqueada en loading indefinidamente. Forzamos false tras 10s.
+        const loadingTimeout = setTimeout(() => {
+            console.warn('DataContext: timeout esperando suscripciones, forzando loading=false');
+            setLoading(false);
+        }, 10_000);
+
         const checkAllLoaded = () => {
             if (Object.values(loadedFlags).every(Boolean)) {
+                clearTimeout(loadingTimeout);
                 setLoading(false);
             }
         };
@@ -110,6 +118,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         });
 
         return () => {
+            clearTimeout(loadingTimeout);
             unsubPatients();
             unsubAllAppointments();
             unsubMyAppointments();

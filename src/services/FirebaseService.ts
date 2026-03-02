@@ -429,7 +429,7 @@ export class FirebaseService implements IDataService {
             batch.set(newNoteRef, {
                 ...basePayload,
                 createdAt: Timestamp.now(),
-                createdBy: this.uid,
+                createdBy: this.professionalName || this.uid,
                 createdByUid: this.uid,
             });
         }

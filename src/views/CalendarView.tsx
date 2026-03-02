@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, Plus, Video, MapPin, CheckCircle, FileText, 
 import { AppointmentModal } from '../components/modals/AppointmentModal';
 import { AppointmentDetailsModal } from '../components/modals/AppointmentDetailsModal';
 import { useCalendarAppointments } from '../hooks/useCalendarAppointments';
-import { usePatients } from '../hooks/usePatients';
+import { useData } from '../context/DataContext';
 
 import { StaffProfile } from '../types';
 
@@ -76,7 +76,7 @@ export const CalendarView = ({ user, profile }: CalendarViewProps) => {
     // Fetch appointments for the visible range
     const { appointments } = useCalendarAppointments(toLocalDateString(startOfRange), toLocalDateString(endOfRange));
 
-    const { patients } = usePatients(user);
+    const { patients } = useData();
 
     const weekDays = Array.from({ length: 6 }, (_, i) => {
         const d = new Date(startOfRange);

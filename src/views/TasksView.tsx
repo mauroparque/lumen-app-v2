@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { User } from 'firebase/auth';
 import { ListTodo, Plus, Search, Square, User as UserIcon, X, Save, Edit2 } from 'lucide-react';
 import { StaffProfile } from '../types';
-import { usePatients } from '../hooks/usePatients';
 import { useData } from '../context/DataContext';
 import { usePendingTasks, PendingTask } from '../hooks/usePendingTasks';
 import { useDataActions } from '../hooks/useDataActions';
@@ -21,8 +20,7 @@ interface TaskFormData {
 }
 
 export const TasksView = ({ user, profile }: TasksViewProps) => {
-    const { patients, loading: loadingPatients } = usePatients(user);
-    const { appointments } = useData();
+    const { patients, loading: loadingPatients, appointments } = useData();
     const { addTask, updateTask, toggleSubtaskCompletion } = useDataActions();
 
     // Create set of patient IDs for filtering tasks

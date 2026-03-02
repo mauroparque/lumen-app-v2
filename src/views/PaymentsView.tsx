@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { User } from 'firebase/auth';
 import { useData } from '../context/DataContext';
-import { usePatients } from '../hooks/usePatients';
 import { usePsiquePayments } from '../hooks/usePsiquePayments';
 import { useAgendaStats } from '../hooks/useAgendaStats';
 import {
@@ -31,8 +30,7 @@ interface PaymentsViewProps {
 }
 
 export const PaymentsView = ({ user, profile }: PaymentsViewProps) => {
-    const { appointments, payments, loading } = useData();
-    const { patients } = usePatients(user);
+    const { appointments, payments, loading, patients } = useData();
     const [searchTerm, setSearchTerm] = useState('');
     const [viewMode, setViewMode] = useState<'overdue' | 'upcoming' | 'history' | 'psique' | 'projection'>('overdue');
     const [selectedDate, setSelectedDate] = useState(new Date());

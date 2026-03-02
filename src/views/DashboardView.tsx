@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { User } from 'firebase/auth';
 import { StaffProfile } from '../types';
 import { useData } from '../context/DataContext';
-import { usePatients } from '../hooks/usePatients';
 import { usePendingTasks } from '../hooks/usePendingTasks';
 import { usePsiquePayments } from '../hooks/usePsiquePayments';
 import { isOverdue } from '../lib/utils';
@@ -28,8 +27,7 @@ interface DashboardViewProps {
 }
 
 export const DashboardView = ({ user, profile, onNavigate }: DashboardViewProps) => {
-    const { appointments, loading } = useData();
-    const { patients } = usePatients(user);
+    const { appointments, loading, patients } = useData();
 
     // Create set of patient IDs for filtering tasks
     const myPatientIds = useMemo(() => new Set(patients.map((p) => p.id)), [patients]);

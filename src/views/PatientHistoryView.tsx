@@ -17,7 +17,6 @@ import {
     Paperclip,
 } from 'lucide-react';
 import { View, ClinicalNote } from '../types';
-import { usePatients } from '../hooks/usePatients';
 import { useData } from '../context/DataContext';
 import { usePendingTasks } from '../hooks/usePendingTasks';
 import { usePatientNotes } from '../hooks/useClinicalNotes';
@@ -49,8 +48,7 @@ export const PatientHistoryView = ({
     const [activeTab, setActiveTab] = useState<'history' | 'tasks'>(initialTab);
     const [showAddTask, setShowAddTask] = useState(false);
     const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
-    const { patients } = usePatients(user);
-    const { appointments } = useData();
+    const { patients, appointments } = useData();
 
     // Create set with just this patient's ID for task filtering
     const myPatientIds = useMemo(() => (patientId ? new Set([patientId]) : new Set<string>()), [patientId]);

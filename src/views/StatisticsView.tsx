@@ -1,6 +1,5 @@
 import { User } from 'firebase/auth';
 import { useData } from '../context/DataContext';
-import { usePatients } from '../hooks/usePatients';
 import { useAgendaStats } from '../hooks/useAgendaStats';
 import {
     BarChart3,
@@ -21,8 +20,7 @@ interface StatisticsViewProps {
 }
 
 export const StatisticsView = ({ user }: StatisticsViewProps) => {
-    const { appointments } = useData();
-    const { patients } = usePatients(user);
+    const { appointments, patients } = useData();
     const stats = useAgendaStats(appointments, patients);
 
     // Calculate some derived stats

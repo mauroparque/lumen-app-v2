@@ -5,7 +5,7 @@ import { Search, Plus } from 'lucide-react';
 import { PatientModal } from '../components/modals/PatientModal';
 import { PatientTable } from '../components/patients/PatientTable';
 import { LoadingSpinner } from '../components/ui';
-import { usePatients } from '../hooks/usePatients';
+import { useData } from '../context/DataContext';
 import { useDataActions } from '../hooks/useDataActions';
 import { toast } from 'sonner';
 import { StaffProfile } from '../types';
@@ -37,7 +37,7 @@ export const PatientsView = ({
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
     const [filterStatus, setFilterStatus] = useState<FilterStatus>('active');
 
-    const { patients, loading } = usePatients(user);
+    const { patients, loading } = useData();
     const { deleteItem } = useDataActions();
 
     // Filter and sort patients

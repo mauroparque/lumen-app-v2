@@ -377,6 +377,31 @@ describe('FirebaseService', () => {
         expect(payload.map((item) => item.id)).toEqual(['a2', 'a3']);
     });
 
+    it('subscribeToPayments filtra por professionalName cuando está seteado', () => {
+        const service = new FirebaseService('uid-1', 'Dra. López');
+        const onData = vi.fn();
+
+        service.subscribeToPayments(onData);
+
+        expect(mockedWhere).toHaveBeenCalledWith('professional', '==', 'Dra. López');
+        expect(mockedQuery).toHaveBeenCalled();
+        expect(mockedOnSnapshot).toHaveBeenCalled();
+    });
+
+    it('subscribeToPayments no aplica filtro de profesional cuando professionalName es null', () => {
+        const service = new FirebaseService('uid-1');
+        const onData = vi.fn();
+
+        service.subscribeToPayments(onData);
+
+        const whereCalls = mockedWhere.mock.calls as unknown[][];
+        const hasProfessionalFilter = whereCalls.some(
+            (call) => call[0] === 'professional' && call[1] === '==',
+        );
+        expect(hasProfessionalFilter).toBe(false);
+        expect(mockedOnSnapshot).toHaveBeenCalled();
+    });
+
     it('deleteRecurringSeries borra docs cuando hay coincidencias', async () => {
         const service = new FirebaseService('uid-1');
         const firstBatchCall = mockedWriteBatch.mock.results[0]?.value as

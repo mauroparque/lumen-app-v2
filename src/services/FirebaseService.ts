@@ -166,7 +166,14 @@ export class FirebaseService implements IDataService {
     }
 
     subscribeToPayments(onPayments: (data: Payment[]) => void): () => void {
-        const paymentsQuery = query(collection(db, PAYMENTS_COLLECTION), orderBy('date', 'desc'), limit(50));
+        const paymentsQuery = this.professionalName
+            ? query(
+                  collection(db, PAYMENTS_COLLECTION),
+                  where('professional', '==', this.professionalName),
+                  orderBy('date', 'desc'),
+                  limit(50),
+              )
+            : query(collection(db, PAYMENTS_COLLECTION), orderBy('date', 'desc'), limit(50));
 
         return onSnapshot(
             paymentsQuery,

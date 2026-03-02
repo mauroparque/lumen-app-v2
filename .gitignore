@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Firebase CLI cache (build artifacts, no código fuente)
+.firebase/
+
 # Environment variables
 .env
 .env.local

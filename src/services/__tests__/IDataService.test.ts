@@ -17,6 +17,7 @@ const createMockService = (overrides?: Partial<IDataService>): IDataService => (
     subscribeToAppointments: vi.fn(),
     subscribeToMyAppointments: vi.fn(),
     subscribeToFinance: vi.fn(),
+    subscribeToPayments: vi.fn(),
     addPatient: vi.fn(),
     updatePatient: vi.fn(),
     deletePatient: vi.fn(),
@@ -90,6 +91,7 @@ describe('IDataService Mockability Demo', () => {
         expect(service.subscribeToAppointments).toBeDefined();
         expect(service.subscribeToMyAppointments).toBeDefined();
         expect(service.subscribeToFinance).toBeDefined();
+        expect(service.subscribeToPayments).toBeDefined();
         expect(service.addPatient).toBeDefined();
         expect(service.updatePatient).toBeDefined();
         expect(service.deletePatient).toBeDefined();
@@ -153,18 +155,41 @@ describe('IDataService Mockability Demo', () => {
     it('mock factory includes all IDataService methods', () => {
         const service = createMockService();
         const expectedMethods = [
-            'subscribeToPatients', 'subscribeToAppointments', 'subscribeToMyAppointments',
-            'subscribeToFinance', 'addPatient', 'updatePatient', 'deletePatient',
-            'addAppointment', 'addRecurringAppointments', 'updateAppointment',
-            'deleteAppointment', 'deleteRecurringSeries', 'deleteRecurringFromDate',
-            'addPayment', 'updatePayment', 'requestBatchInvoice',
+            'subscribeToPatients',
+            'subscribeToAppointments',
+            'subscribeToMyAppointments',
+            'subscribeToFinance',
+            'subscribeToPayments',
+            'addPatient',
+            'updatePatient',
+            'deletePatient',
+            'addAppointment',
+            'addRecurringAppointments',
+            'updateAppointment',
+            'deleteAppointment',
+            'deleteRecurringSeries',
+            'deleteRecurringFromDate',
+            'addPayment',
+            'updatePayment',
+            'requestBatchInvoice',
             'subscribeToBillingStatus',
-            'subscribeToClinicalNote', 'subscribeToPatientNotes', 'saveNote',
-            'updateNote', 'uploadNoteAttachment', 'subscribeToAllNotes',
-            'completeTask', 'addTask', 'updateTask', 'toggleSubtaskCompletion',
-            'subscribeToPsiquePayments', 'markPsiquePaymentAsPaid',
-            'subscribeToPatientAppointments', 'subscribeToPatientPayments',
-            'subscribeToStaffProfile', 'createStaffProfile', 'updateStaffProfile',
+            'subscribeToClinicalNote',
+            'subscribeToPatientNotes',
+            'saveNote',
+            'updateNote',
+            'uploadNoteAttachment',
+            'subscribeToAllNotes',
+            'completeTask',
+            'addTask',
+            'updateTask',
+            'toggleSubtaskCompletion',
+            'subscribeToPsiquePayments',
+            'markPsiquePaymentAsPaid',
+            'subscribeToPatientAppointments',
+            'subscribeToPatientPayments',
+            'subscribeToStaffProfile',
+            'createStaffProfile',
+            'updateStaffProfile',
         ];
         for (const method of expectedMethods) {
             expect(service).toHaveProperty(method);

@@ -89,19 +89,16 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
             setLoading(false);
         });
 
-        // 3. Subscribe to Finance (filtered by professional)
-        const unsubFinance = service.subscribeToFinance(
-            () => {}, // We don't need unpaid appointments here
-            (paymentData) => {
-                setPayments(paymentData);
-            },
-        );
+        // 3. Subscribe to Payments only
+        const unsubPayments = service.subscribeToPayments((paymentData) => {
+            setPayments(paymentData);
+        });
 
         return () => {
             unsubPatients();
             unsubAllAppointments();
             unsubMyAppointments();
-            unsubFinance();
+            unsubPayments();
         };
     }, [service, dateWindow]);
 

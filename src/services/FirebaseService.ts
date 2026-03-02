@@ -13,8 +13,8 @@ import {
     serverTimestamp,
     Timestamp,
     getDocs,
-    getDoc,
     setDoc,
+    runTransaction,
 } from 'firebase/firestore';
 import { db, storage } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -151,6 +151,19 @@ export class FirebaseService implements IDataService {
             unsubUnpaid();
             unsubPayments();
         };
+    }
+
+    subscribeToPayments(onPayments: (data: Payment[]) => void): () => void {
+        const paymentsQuery = query(collection(db, PAYMENTS_COLLECTION), orderBy('date', 'desc'), limit(50));
+
+        return onSnapshot(
+            paymentsQuery,
+            (snapshot) => {
+                const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Payment);
+                onPayments(data);
+            },
+            (error) => console.error('Error fetching payments:', error),
+        );
     }
 
     async addPatient(patient: PatientInput): Promise<string> {
@@ -375,6 +388,7 @@ export class FirebaseService implements IDataService {
     }
 
     async saveNote(noteData: Partial<ClinicalNote>, appointmentId: string, existingNoteId?: string): Promise<void> {
+        const batch = writeBatch(db);
         const notesCollection = collection(db, NOTES_COLLECTION);
 
         const basePayload = {
@@ -384,9 +398,10 @@ export class FirebaseService implements IDataService {
         };
 
         if (existingNoteId) {
-            await updateDoc(doc(notesCollection, existingNoteId), basePayload);
+            batch.update(doc(notesCollection, existingNoteId), basePayload);
         } else {
-            await addDoc(notesCollection, {
+            const newNoteRef = doc(notesCollection);
+            batch.set(newNoteRef, {
                 ...basePayload,
                 createdAt: Timestamp.now(),
                 createdBy: this.uid,
@@ -394,9 +409,10 @@ export class FirebaseService implements IDataService {
             });
         }
 
-        // Update appointment to indicate it has notes
         const appointmentRef = doc(db, APPOINTMENTS_COLLECTION, appointmentId);
-        await updateDoc(appointmentRef, { hasNotes: true });
+        batch.update(appointmentRef, { hasNotes: true });
+
+        await batch.commit();
     }
 
     async updateNote(noteId: string, data: Partial<ClinicalNote>): Promise<void> {
@@ -431,19 +447,19 @@ export class FirebaseService implements IDataService {
 
     async completeTask(noteId: string, taskIndex: number): Promise<void> {
         const noteRef = doc(db, NOTES_COLLECTION, noteId);
-        const noteSnap = await getDoc(noteRef);
 
-        if (!noteSnap.exists()) {
-            throw new Error('Note not found');
-        }
+        await runTransaction(db, async (transaction) => {
+            const noteSnap = await transaction.get(noteRef);
+            if (!noteSnap.exists()) throw new Error('Note not found');
 
-        const noteData = noteSnap.data() as ClinicalNote;
-        const updatedTasks = [...(noteData.tasks || [])];
+            const noteData = noteSnap.data() as ClinicalNote;
+            const updatedTasks = [...(noteData.tasks || [])];
 
-        if (updatedTasks[taskIndex]) {
-            updatedTasks[taskIndex].completed = true;
-            await updateDoc(noteRef, { tasks: updatedTasks });
-        }
+            if (updatedTasks[taskIndex]) {
+                updatedTasks[taskIndex] = { ...updatedTasks[taskIndex], completed: true };
+                transaction.update(noteRef, { tasks: updatedTasks });
+            }
+        });
     }
 
     async addTask(task: TaskInput): Promise<string> {
@@ -475,59 +491,56 @@ export class FirebaseService implements IDataService {
         data: { text: string; subtasks?: TaskSubitem[] },
     ): Promise<void> {
         const noteRef = doc(db, NOTES_COLLECTION, noteId);
-        const noteSnap = await getDoc(noteRef);
 
-        if (!noteSnap.exists()) {
-            throw new Error('Note not found');
-        }
+        await runTransaction(db, async (transaction) => {
+            const noteSnap = await transaction.get(noteRef);
+            if (!noteSnap.exists()) throw new Error('Note not found');
 
-        const noteData = noteSnap.data() as ClinicalNote;
-        const updatedTasks = [...(noteData.tasks || [])];
+            const noteData = noteSnap.data() as ClinicalNote;
+            const updatedTasks = [...(noteData.tasks || [])];
 
-        if (!updatedTasks[taskIndex]) {
-            throw new Error(`Task at index ${taskIndex} not found`);
-        }
+            if (!updatedTasks[taskIndex]) {
+                throw new Error(`Task at index ${taskIndex} not found`);
+            }
 
-        updatedTasks[taskIndex] = {
-            ...updatedTasks[taskIndex],
-            text: data.text,
-            subtasks: data.subtasks,
-        };
+            updatedTasks[taskIndex] = {
+                ...updatedTasks[taskIndex],
+                text: data.text,
+                subtasks: data.subtasks,
+            };
 
-        await updateDoc(noteRef, {
-            tasks: updatedTasks,
-            updatedAt: Timestamp.now(),
+            transaction.update(noteRef, {
+                tasks: updatedTasks,
+                updatedAt: Timestamp.now(),
+            });
         });
     }
 
     async toggleSubtaskCompletion(noteId: string, taskIndex: number, subtaskIndex: number): Promise<void> {
         const noteRef = doc(db, NOTES_COLLECTION, noteId);
-        const noteSnap = await getDoc(noteRef);
 
-        if (!noteSnap.exists()) {
-            throw new Error('Note not found');
-        }
+        await runTransaction(db, async (transaction) => {
+            const noteSnap = await transaction.get(noteRef);
+            if (!noteSnap.exists()) throw new Error('Note not found');
 
-        const noteData = noteSnap.data() as ClinicalNote;
-        const updatedTasks = [...(noteData.tasks || [])];
+            const noteData = noteSnap.data() as ClinicalNote;
+            const updatedTasks = [...(noteData.tasks || [])];
 
-        if (!updatedTasks[taskIndex]?.subtasks?.[subtaskIndex]) {
-            throw new Error(`Subtask at index ${subtaskIndex} not found`);
-        }
+            if (!updatedTasks[taskIndex]?.subtasks?.[subtaskIndex]) {
+                throw new Error(`Subtask at index ${subtaskIndex} not found`);
+            }
 
-        const subtasks = [...(updatedTasks[taskIndex].subtasks || [])];
-        subtasks[subtaskIndex] = {
-            ...subtasks[subtaskIndex],
-            completed: !subtasks[subtaskIndex].completed,
-        };
-        updatedTasks[taskIndex] = {
-            ...updatedTasks[taskIndex],
-            subtasks,
-        };
+            const subtasks = [...(updatedTasks[taskIndex].subtasks || [])];
+            subtasks[subtaskIndex] = {
+                ...subtasks[subtaskIndex],
+                completed: !subtasks[subtaskIndex].completed,
+            };
+            updatedTasks[taskIndex] = { ...updatedTasks[taskIndex], subtasks };
 
-        await updateDoc(noteRef, {
-            tasks: updatedTasks,
-            updatedAt: Timestamp.now(),
+            transaction.update(noteRef, {
+                tasks: updatedTasks,
+                updatedAt: Timestamp.now(),
+            });
         });
     }
 

@@ -73,25 +73,40 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     useEffect(() => {
         if (!service) return;
 
+        let loadedFlags = { patients: false, myAppointments: false, allAppointments: false, payments: false };
+
+        const checkAllLoaded = () => {
+            if (Object.values(loadedFlags).every(Boolean)) {
+                setLoading(false);
+            }
+        };
+
         // 1. Subscribe to Patients (filtered by professional)
         const unsubPatients = service.subscribeToPatients((data) => {
             setPatients(data);
+            loadedFlags.patients = true;
+            checkAllLoaded();
         });
 
         // All appointments (for agenda with "Todos los profesionales")
         const unsubAllAppointments = service.subscribeToAppointments(dateWindow.start, dateWindow.end, (data) => {
             setAllAppointments(data);
+            loadedFlags.allAppointments = true;
+            checkAllLoaded();
         });
 
         // My appointments only (filtered by professional)
         const unsubMyAppointments = service.subscribeToMyAppointments(dateWindow.start, dateWindow.end, (data) => {
             setMyAppointments(data);
-            setLoading(false);
+            loadedFlags.myAppointments = true;
+            checkAllLoaded();
         });
 
         // 3. Subscribe to Payments only
         const unsubPayments = service.subscribeToPayments((paymentData) => {
             setPayments(paymentData);
+            loadedFlags.payments = true;
+            checkAllLoaded();
         });
 
         return () => {

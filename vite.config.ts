@@ -7,7 +7,7 @@ export default defineConfig({
     plugins: [
         react(),
         VitePWA({
-            registerType: 'prompt', // User controls when to update
+            registerType: 'autoUpdate',
             includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
             manifest: {
                 name: 'Lumen Salud Mental',
@@ -40,7 +40,7 @@ export default defineConfig({
             workbox: {
                 // Dynamic cacheId forces SW update on each build (bypasses Cloudflare cache)
                 cacheId: `lumen-app-v2-${new Date().getTime()}`,
-                // skipWaiting removed - user controls update via prompt
+                skipWaiting: true,
                 clientsClaim: true,
                 cleanupOutdatedCaches: true,
                 globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],

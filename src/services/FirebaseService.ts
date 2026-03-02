@@ -15,6 +15,7 @@ import {
     getDocs,
     setDoc,
     runTransaction,
+    type WriteBatch,
 } from 'firebase/firestore';
 import { db, storage } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -43,6 +44,17 @@ import type {
     PsiquePayment,
     StaffProfile,
 } from '../types';
+
+const FIRESTORE_BATCH_LIMIT = 500;
+
+async function commitInBatches(operations: ((batch: WriteBatch) => void)[]): Promise<void> {
+    for (let i = 0; i < operations.length; i += FIRESTORE_BATCH_LIMIT) {
+        const chunk = operations.slice(i, i + FIRESTORE_BATCH_LIMIT);
+        const batch = writeBatch(db);
+        chunk.forEach((op) => op(batch));
+        await batch.commit();
+    }
+}
 
 export class FirebaseService implements IDataService {
     private uid: string;
@@ -200,25 +212,26 @@ export class FirebaseService implements IDataService {
         dates: string[],
         recurrenceRule: string = 'WEEKLY',
     ): Promise<void> {
-        const batch = writeBatch(db);
         const seriesId = crypto.randomUUID();
 
-        dates.forEach((date, index) => {
-            const docRef = doc(collection(db, APPOINTMENTS_COLLECTION));
-            const appointmentData = {
-                ...baseAppointment,
-                date,
-                status: baseAppointment.status || 'programado',
-                createdByUid: this.uid,
-                createdAt: serverTimestamp(),
-                recurrenceId: seriesId,
-                recurrenceIndex: index,
-                recurrenceRule,
+        const operations = dates.map((date, index) => {
+            return (batch: WriteBatch) => {
+                const docRef = doc(collection(db, APPOINTMENTS_COLLECTION));
+                const appointmentData = {
+                    ...baseAppointment,
+                    date,
+                    status: baseAppointment.status || 'programado',
+                    createdByUid: this.uid,
+                    createdAt: serverTimestamp(),
+                    recurrenceId: seriesId,
+                    recurrenceIndex: index,
+                    recurrenceRule,
+                };
+                batch.set(docRef, appointmentData);
             };
-            batch.set(docRef, appointmentData);
         });
 
-        await batch.commit();
+        await commitInBatches(operations);
     }
 
     async updateAppointment(id: string, data: Partial<Appointment>): Promise<void> {
@@ -238,12 +251,11 @@ export class FirebaseService implements IDataService {
 
         if (snapshot.empty) return 0;
 
-        const batch = writeBatch(db);
-        snapshot.docs.forEach((docSnap) => {
-            batch.delete(docSnap.ref);
+        const operations = snapshot.docs.map((docSnap) => {
+            return (batch: WriteBatch) => batch.delete(docSnap.ref);
         });
 
-        await batch.commit();
+        await commitInBatches(operations);
         return snapshot.docs.length;
     }
 
@@ -259,12 +271,11 @@ export class FirebaseService implements IDataService {
 
         if (toDelete.length === 0) return 0;
 
-        const batch = writeBatch(db);
-        toDelete.forEach((docSnap) => {
-            batch.delete(docSnap.ref);
+        const operations = toDelete.map((docSnap) => {
+            return (batch: WriteBatch) => batch.delete(docSnap.ref);
         });
 
-        await batch.commit();
+        await commitInBatches(operations);
         return toDelete.length;
     }
 

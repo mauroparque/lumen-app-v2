@@ -20,6 +20,7 @@ export interface IDataService {
     subscribeToAppointments(start: string, end: string, onData: (data: Appointment[]) => void): () => void;
     subscribeToMyAppointments(start: string, end: string, onData: (data: Appointment[]) => void): () => void;
     subscribeToFinance(onUnpaid: (data: Appointment[]) => void, onPayments: (data: Payment[]) => void): () => void;
+    subscribeToPayments(onData: (data: Payment[]) => void): () => void;
 
     // Escritura (Promesas)
     addPatient(patient: PatientInput): Promise<string>;

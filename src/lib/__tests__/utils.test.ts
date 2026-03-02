@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { formatPhoneNumber, cn } from '../utils';
+import { describe, it, expect, vi } from 'vitest';
+import { formatPhoneNumber, cn, calculateAge, isOverdue, getAuthErrorMessage } from '../utils';
 
 describe('formatPhoneNumber', () => {
     it('removes non-numeric characters', () => {
@@ -60,5 +60,114 @@ describe('cn (classnames utility)', () => {
     it('handles empty call', () => {
         const result = cn();
         expect(result).toBe('');
+    });
+});
+
+describe('calculateAge', () => {
+    it('retorna edad correcta para fecha pasada', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-03-01'));
+
+        expect(calculateAge('1990-06-15')).toBe(35);
+
+        vi.useRealTimers();
+    });
+
+    it('retorna edad decrementada si aún no cumplió años este año', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-03-01'));
+
+        expect(calculateAge('1990-12-25')).toBe(35);
+
+        vi.useRealTimers();
+    });
+
+    it('retorna null si birthDate es undefined', () => {
+        expect(calculateAge(undefined)).toBeNull();
+    });
+
+    it('retorna null si birthDate es string vacío', () => {
+        expect(calculateAge('')).toBeNull();
+    });
+
+    it('parsea birthDate como fecha local (no UTC) para evitar adelanto de día en TZ negativas', () => {
+        // Nota: "YYYY-MM-DD" sin sufijo se parsea como UTC midnight en JS.
+        // En TZ=-3 (Argentina), eso resuelve al día anterior en hora local,
+        // causando errores de +1 año cerca del cumpleaños.
+        // Con T00:00:00 se fuerza parsing local. Este test verifica el contrato en UTC,
+        // pero la regresión real aplica en TZ < 0.
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-03-01T03:00:00')); // 03:00 local = mediodía en UTC-9
+
+        // Persona nacida el 1 de marzo de 1990: hoy ES su cumpleaños
+        expect(calculateAge('1990-03-01')).toBe(36); // debe dar 36, no 35
+
+        vi.useRealTimers();
+    });
+});
+
+describe('isOverdue', () => {
+    it('retorna true si la cita ya pasó (más de 1 hora)', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-03-01T15:00:00'));
+
+        expect(isOverdue({ date: '2026-03-01', time: '10:00' })).toBe(true);
+
+        vi.useRealTimers();
+    });
+
+    it('retorna false si la cita es futura', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-03-01T09:00:00'));
+
+        expect(isOverdue({ date: '2026-03-01', time: '10:00' })).toBe(false);
+
+        vi.useRealTimers();
+    });
+
+    it('retorna false si la cita es hoy y dentro de la ventana de 1h', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-03-01T10:30:00'));
+
+        expect(isOverdue({ date: '2026-03-01', time: '10:00' })).toBe(false);
+
+        vi.useRealTimers();
+    });
+
+    it('maneja time ausente usando 00:00 como default', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-03-01T15:00:00'));
+
+        expect(isOverdue({ date: '2026-03-01' })).toBe(true);
+
+        vi.useRealTimers();
+    });
+});
+
+describe('getAuthErrorMessage', () => {
+    it('mapea auth/user-not-found a mensaje en español', () => {
+        expect(getAuthErrorMessage('Firebase: Error (auth/user-not-found).')).toBe(
+            'No se encontró una cuenta con ese email.',
+        );
+    });
+
+    it('mapea auth/wrong-password a mensaje en español', () => {
+        expect(getAuthErrorMessage('Firebase: Error (auth/wrong-password).')).toBe('Contraseña incorrecta.');
+    });
+
+    it('mapea auth/invalid-credential a mensaje genérico', () => {
+        expect(getAuthErrorMessage('Firebase: Error (auth/invalid-credential).')).toBe(
+            'Email o contraseña incorrectos.',
+        );
+    });
+
+    it('mapea auth/too-many-requests a mensaje de rate limit', () => {
+        expect(getAuthErrorMessage('Firebase: Error (auth/too-many-requests).')).toBe(
+            'Demasiados intentos. Esperá unos minutos e intentá de nuevo.',
+        );
+    });
+
+    it('retorna mensaje genérico para errores desconocidos', () => {
+        expect(getAuthErrorMessage('Something unexpected')).toBe('Error de autenticación. Intentá de nuevo.');
     });
 });

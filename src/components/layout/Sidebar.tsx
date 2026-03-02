@@ -4,6 +4,7 @@ import { auth } from '../../lib/firebase';
 import { User } from 'firebase/auth';
 import { View } from '../../types';
 import { useData } from '../../context/DataContext';
+import { isOverdue } from '../../lib/utils';
 
 interface SidebarProps {
     user: User;
@@ -16,13 +17,8 @@ export const Sidebar = ({ user, currentView, setCurrentView }: SidebarProps) => 
 
     const hasPendingDebts = appointments.some((a) => {
         if (a.isPaid) return false;
-        // Cancelados sin cobro no generan deuda
         if (a.status === 'cancelado' && !a.chargeOnCancellation) return false;
-
-        const apptDate = new Date(a.date + 'T00:00:00');
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        return apptDate < now;
+        return isOverdue(a);
     });
 
     return (
@@ -99,7 +95,14 @@ export const Sidebar = ({ user, currentView, setCurrentView }: SidebarProps) => 
     );
 };
 
-const SidebarItem = ({ icon: Icon, label, active, onClick }: any) => (
+interface SidebarItemProps {
+    icon: React.ComponentType<{ size?: number | string; className?: string }>;
+    label: string;
+    active: boolean;
+    onClick: () => void;
+}
+
+const SidebarItem = ({ icon: Icon, label, active, onClick }: SidebarItemProps) => (
     <button
         onClick={onClick}
         className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${active ? 'bg-teal-50 text-teal-700 font-medium' : 'text-slate-600 hover:bg-slate-50'}`}

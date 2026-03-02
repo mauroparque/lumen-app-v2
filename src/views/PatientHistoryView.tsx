@@ -17,12 +17,11 @@ import {
     Paperclip,
 } from 'lucide-react';
 import { View, ClinicalNote } from '../types';
-import { usePatients } from '../hooks/usePatients';
 import { useData } from '../context/DataContext';
 import { usePendingTasks } from '../hooks/usePendingTasks';
 import { usePatientNotes } from '../hooks/useClinicalNotes';
 import { StaffProfile } from '../types';
-import { formatPhoneNumber } from '../lib/utils';
+import { formatPhoneNumber, calculateAge } from '../lib/utils';
 import { AddTaskModal } from '../components/modals/AddTaskModal';
 import { toast } from 'sonner';
 
@@ -33,18 +32,6 @@ interface PatientHistoryViewProps {
     setCurrentView: (view: View) => void;
     initialTab?: 'history' | 'tasks';
 }
-
-const calculateAge = (birthDate?: string): number | null => {
-    if (!birthDate) return null;
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-        age--;
-    }
-    return age;
-};
 
 const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr + 'T00:00:00');
@@ -61,8 +48,7 @@ export const PatientHistoryView = ({
     const [activeTab, setActiveTab] = useState<'history' | 'tasks'>(initialTab);
     const [showAddTask, setShowAddTask] = useState(false);
     const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
-    const { patients } = usePatients(user);
-    const { appointments } = useData();
+    const { patients, appointments } = useData();
 
     // Create set with just this patient's ID for task filtering
     const myPatientIds = useMemo(() => (patientId ? new Set([patientId]) : new Set<string>()), [patientId]);

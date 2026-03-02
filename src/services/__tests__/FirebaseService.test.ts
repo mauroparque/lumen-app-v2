@@ -51,6 +51,7 @@ vi.mock('firebase/firestore', () => {
     const getDocs = vi.fn();
     const getDoc = vi.fn();
     const setDoc = vi.fn();
+    const runTransaction = vi.fn();
 
     return {
         collection,
@@ -69,14 +70,11 @@ vi.mock('firebase/firestore', () => {
         getDocs,
         getDoc,
         setDoc,
+        runTransaction,
     };
 });
 
-import {
-    getDownloadURL,
-    ref,
-    uploadBytes,
-} from 'firebase/storage';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import {
     addDoc,
     collection,
@@ -93,6 +91,7 @@ import {
     updateDoc,
     where,
     writeBatch,
+    runTransaction,
 } from 'firebase/firestore';
 import { FirebaseService } from '../FirebaseService';
 
@@ -114,6 +113,7 @@ const mockedUpdateDoc = vi.mocked(updateDoc);
 const mockedUploadBytes = vi.mocked(uploadBytes);
 const mockedWhere = vi.mocked(where);
 const mockedWriteBatch = vi.mocked(writeBatch);
+const mockedRunTransaction = vi.mocked(runTransaction);
 
 const makeSnapshot = (docs: Array<{ id: string; data: Record<string, unknown> }>) => ({
     empty: docs.length === 0,
@@ -177,10 +177,7 @@ describe('FirebaseService', () => {
         await service.updatePatient('patient-2', { phone: '999' });
 
         expect(mockedDoc).toHaveBeenCalled();
-        expect(mockedUpdateDoc).toHaveBeenCalledWith(
-            expect.objectContaining({ __type: 'doc' }),
-            { phone: '999' },
-        );
+        expect(mockedUpdateDoc).toHaveBeenCalledWith(expect.objectContaining({ __type: 'doc' }), { phone: '999' });
     });
 
     it('deletePatient llama deleteDoc con la referencia correcta', async () => {
@@ -224,10 +221,9 @@ describe('FirebaseService', () => {
 
         await service.updateAppointment('appt-2', { status: 'completado' });
 
-        expect(mockedUpdateDoc).toHaveBeenCalledWith(
-            expect.objectContaining({ __type: 'doc' }),
-            { status: 'completado' },
-        );
+        expect(mockedUpdateDoc).toHaveBeenCalledWith(expect.objectContaining({ __type: 'doc' }), {
+            status: 'completado',
+        });
     });
 
     it('deleteAppointment llama deleteDoc con la referencia', async () => {
@@ -290,7 +286,7 @@ describe('FirebaseService', () => {
         const activeBatch = firstBatchCall.value as unknown as {
             set: ReturnType<typeof vi.fn>;
         };
-        const setCall = (activeBatch.set.mock.calls[0] as [unknown, Record<string, unknown>]);
+        const setCall = activeBatch.set.mock.calls[0] as [unknown, Record<string, unknown>];
         expect(setCall[1].date).toBe(fakeTimestamp);
         expect(mockedTimestamp).not.toHaveBeenCalled();
     });
@@ -314,8 +310,42 @@ describe('FirebaseService', () => {
         const activeBatch = firstBatchCall.value as unknown as {
             set: ReturnType<typeof vi.fn>;
         };
-        const setCall = (activeBatch.set.mock.calls[0] as [unknown, Record<string, unknown>]);
+        const setCall = activeBatch.set.mock.calls[0] as [unknown, Record<string, unknown>];
         expect(setCall[1].date).toEqual({ __type: 'ts-now' });
+    });
+
+    it('addPayment incluye el professional del servicio para habilitar RBAC en Firestore', async () => {
+        const service = new FirebaseService('uid-10', 'Dra. García');
+
+        await service.addPayment({
+            patientName: 'Paciente RBAC',
+            amount: 5000,
+            date: null,
+            concept: 'Sesión',
+        });
+
+        const firstBatchCall = mockedWriteBatch.mock.results[0];
+        if (!firstBatchCall || firstBatchCall.type !== 'return') {
+            throw new Error('writeBatch no devolvió un batch válido');
+        }
+        const activeBatch = firstBatchCall.value as unknown as {
+            set: ReturnType<typeof vi.fn>;
+        };
+        const setCall = activeBatch.set.mock.calls[0] as [unknown, Record<string, unknown>];
+        expect(setCall[1].professional).toBe('Dra. García');
+    });
+
+    it('addPayment lanza error explícito cuando professionalName no está seteado', async () => {
+        const service = new FirebaseService('uid-99'); // sin professionalName
+
+        await expect(
+            service.addPayment({
+                patientName: 'Paciente Sin Pro',
+                amount: 1000,
+                date: null,
+                concept: 'Sesión',
+            }),
+        ).rejects.toThrow(/professional/i);
     });
 
     it('subscribeToAppointments registra query por ventana de fechas', () => {
@@ -360,24 +390,49 @@ describe('FirebaseService', () => {
         expect(payload.map((item) => item.id)).toEqual(['a2', 'a3']);
     });
 
+    it('subscribeToPayments filtra por professionalName cuando está seteado', () => {
+        const service = new FirebaseService('uid-1', 'Dra. López');
+        const onData = vi.fn();
+
+        service.subscribeToPayments(onData);
+
+        expect(mockedWhere).toHaveBeenCalledWith('professional', '==', 'Dra. López');
+        expect(mockedQuery).toHaveBeenCalled();
+        expect(mockedOnSnapshot).toHaveBeenCalled();
+    });
+
+    it('subscribeToPayments no aplica filtro de profesional cuando professionalName es null', () => {
+        const service = new FirebaseService('uid-1');
+        const onData = vi.fn();
+
+        service.subscribeToPayments(onData);
+
+        const whereCalls = mockedWhere.mock.calls as unknown[][];
+        const hasProfessionalFilter = whereCalls.some(
+            (call) => call[0] === 'professional' && call[1] === '==',
+        );
+        expect(hasProfessionalFilter).toBe(false);
+        expect(mockedOnSnapshot).toHaveBeenCalled();
+    });
+
     it('deleteRecurringSeries borra docs cuando hay coincidencias', async () => {
         const service = new FirebaseService('uid-1');
         const firstBatchCall = mockedWriteBatch.mock.results[0]?.value as
             | { delete: ReturnType<typeof vi.fn>; commit: ReturnType<typeof vi.fn> }
             | undefined;
 
-        mockedGetDocs.mockResolvedValue(
-            {
-                empty: false,
-                docs: [
-                    { ref: { id: 'r1' } },
-                    { ref: { id: 'r2' } },
-                ],
-            } as never,
-        );
+        mockedGetDocs.mockResolvedValue({
+            empty: false,
+            docs: [{ ref: { id: 'r1' } }, { ref: { id: 'r2' } }],
+        } as never);
 
         const deleted = await service.deleteRecurringSeries('rec-1');
-        const activeBatch = firstBatchCall ?? (mockedWriteBatch.mock.results[0]?.value as { delete: ReturnType<typeof vi.fn>; commit: ReturnType<typeof vi.fn> });
+        const activeBatch =
+            firstBatchCall ??
+            (mockedWriteBatch.mock.results[0]?.value as {
+                delete: ReturnType<typeof vi.fn>;
+                commit: ReturnType<typeof vi.fn>;
+            });
 
         expect(activeBatch.delete).toHaveBeenCalledTimes(2);
         expect(activeBatch.commit).toHaveBeenCalledTimes(1);
@@ -390,17 +445,20 @@ describe('FirebaseService', () => {
             | { delete: ReturnType<typeof vi.fn>; commit: ReturnType<typeof vi.fn> }
             | undefined;
 
-        mockedGetDocs.mockResolvedValue(
-            {
-                docs: [
-                    { ref: { id: 'd1' }, data: () => ({ date: '2026-01-01' }) },
-                    { ref: { id: 'd2' }, data: () => ({ date: '2026-02-10' }) },
-                ],
-            } as never,
-        );
+        mockedGetDocs.mockResolvedValue({
+            docs: [
+                { ref: { id: 'd1' }, data: () => ({ date: '2026-01-01' }) },
+                { ref: { id: 'd2' }, data: () => ({ date: '2026-02-10' }) },
+            ],
+        } as never);
 
         const deleted = await service.deleteRecurringFromDate('rec-1', '2026-02-01');
-        const activeBatch = firstBatchCall ?? (mockedWriteBatch.mock.results[0]?.value as { delete: ReturnType<typeof vi.fn>; commit: ReturnType<typeof vi.fn> });
+        const activeBatch =
+            firstBatchCall ??
+            (mockedWriteBatch.mock.results[0]?.value as {
+                delete: ReturnType<typeof vi.fn>;
+                commit: ReturnType<typeof vi.fn>;
+            });
 
         expect(activeBatch.delete).toHaveBeenCalledTimes(1);
         expect(activeBatch.commit).toHaveBeenCalledTimes(1);
@@ -432,40 +490,47 @@ describe('FirebaseService', () => {
 
         service.subscribeToBillingStatus('req-1', onData);
 
-        const snapshotCallback = mockedOnSnapshot.mock.calls[mockedOnSnapshot.mock.calls.length - 1][1] as (
-            snap: { exists: () => boolean; data: () => Record<string, unknown> },
-        ) => void;
+        const snapshotCallback = mockedOnSnapshot.mock.calls[mockedOnSnapshot.mock.calls.length - 1][1] as (snap: {
+            exists: () => boolean;
+            data: () => Record<string, unknown>;
+        }) => void;
         snapshotCallback({
             exists: () => true,
             data: () => ({ status: 'completed', invoiceUrl: 'http://invoice', invoiceNumber: 'F-001' }),
         });
 
-        expect(onData).toHaveBeenCalledWith(
-            expect.objectContaining({ status: 'completed', invoiceNumber: 'F-001' }),
-        );
+        expect(onData).toHaveBeenCalledWith(expect.objectContaining({ status: 'completed', invoiceNumber: 'F-001' }));
     });
 
     it('saveNote crea nota nueva y marca hasNotes en appointment', async () => {
         const service = new FirebaseService('uid-1');
-        mockedAddDoc.mockResolvedValue({ id: 'note-1' } as never);
-        mockedUpdateDoc.mockResolvedValue(undefined);
 
         await service.saveNote({ content: 'nota' } as never, 'appt-1');
 
-        expect(mockedAddDoc).toHaveBeenCalled();
-        expect(mockedUpdateDoc).toHaveBeenCalledWith(
-            expect.objectContaining({ __type: 'doc' }),
-            expect.objectContaining({ hasNotes: true }),
-        );
+        expect(mockedWriteBatch).toHaveBeenCalled();
+        const batchCall = mockedWriteBatch.mock.results[0]?.value as {
+            set: ReturnType<typeof vi.fn>;
+            commit: ReturnType<typeof vi.fn>;
+            update: ReturnType<typeof vi.fn>;
+        };
+        expect(batchCall.set).toHaveBeenCalled();
+        expect(batchCall.update).toHaveBeenCalled();
+        expect(batchCall.commit).toHaveBeenCalled();
     });
 
     it('saveNote actualiza nota existente cuando recibe existingNoteId', async () => {
         const service = new FirebaseService('uid-1');
-        mockedUpdateDoc.mockResolvedValue(undefined);
 
         await service.saveNote({ content: 'nota editada' } as never, 'appt-1', 'note-existing');
 
-        expect(mockedUpdateDoc).toHaveBeenCalled();
+        expect(mockedWriteBatch).toHaveBeenCalled();
+        const batchCall = mockedWriteBatch.mock.results[0]?.value as {
+            set: ReturnType<typeof vi.fn>;
+            commit: ReturnType<typeof vi.fn>;
+            update: ReturnType<typeof vi.fn>;
+        };
+        expect(batchCall.update).toHaveBeenCalled();
+        expect(batchCall.commit).toHaveBeenCalled();
     });
 
     it('updateNote agrega updatedAt al patch', async () => {
@@ -483,13 +548,19 @@ describe('FirebaseService', () => {
 
     it('completeTask marca completada la tarea si existe', async () => {
         const service = new FirebaseService('uid-1');
-        mockedGetDoc.mockResolvedValue(
-            {
+        mockedRunTransaction.mockImplementation(async (_db, callback) => {
+            mockedGetDoc.mockResolvedValue({
                 exists: () => true,
                 data: () => ({ tasks: [{ text: 't1', completed: false }] }),
-            } as never,
-        );
-        mockedUpdateDoc.mockResolvedValue(undefined);
+            } as never);
+            const mockTransaction = {
+                get: mockedGetDoc,
+                update: mockedUpdateDoc,
+                set: vi.fn(),
+                delete: vi.fn(),
+            };
+            await callback(mockTransaction as never);
+        });
 
         await service.completeTask('note-1', 0);
 
@@ -514,13 +585,19 @@ describe('FirebaseService', () => {
 
     it('updateTask actualiza texto y subtasks', async () => {
         const service = new FirebaseService('uid-1');
-        mockedGetDoc.mockResolvedValue(
-            {
+        mockedRunTransaction.mockImplementation(async (_db, callback) => {
+            mockedGetDoc.mockResolvedValue({
                 exists: () => true,
                 data: () => ({ tasks: [{ text: 'old', completed: false }] }),
-            } as never,
-        );
-        mockedUpdateDoc.mockResolvedValue(undefined);
+            } as never);
+            const mockTransaction = {
+                get: mockedGetDoc,
+                update: mockedUpdateDoc,
+                set: vi.fn(),
+                delete: vi.fn(),
+            };
+            await callback(mockTransaction as never);
+        });
 
         await service.updateTask('note-1', 0, { text: 'new text', subtasks: [{ text: 's1', completed: false }] });
 
@@ -529,13 +606,19 @@ describe('FirebaseService', () => {
 
     it('toggleSubtaskCompletion invierte completed de subtask', async () => {
         const service = new FirebaseService('uid-1');
-        mockedGetDoc.mockResolvedValue(
-            {
+        mockedRunTransaction.mockImplementation(async (_db, callback) => {
+            mockedGetDoc.mockResolvedValue({
                 exists: () => true,
                 data: () => ({ tasks: [{ text: 't', completed: false, subtasks: [{ text: 's', completed: false }] }] }),
-            } as never,
-        );
-        mockedUpdateDoc.mockResolvedValue(undefined);
+            } as never);
+            const mockTransaction = {
+                get: mockedGetDoc,
+                update: mockedUpdateDoc,
+                set: vi.fn(),
+                delete: vi.fn(),
+            };
+            await callback(mockTransaction as never);
+        });
 
         await service.toggleSubtaskCompletion('note-1', 0, 0);
 
@@ -612,7 +695,12 @@ describe('FirebaseService', () => {
             ['2026-01-01', '2026-01-08'],
         );
 
-        const activeBatch = firstBatchCall ?? (mockedWriteBatch.mock.results[0]?.value as { set: ReturnType<typeof vi.fn>; commit: ReturnType<typeof vi.fn> });
+        const activeBatch =
+            firstBatchCall ??
+            (mockedWriteBatch.mock.results[0]?.value as {
+                set: ReturnType<typeof vi.fn>;
+                commit: ReturnType<typeof vi.fn>;
+            });
         expect(activeBatch.set).toHaveBeenCalledTimes(2);
         expect(activeBatch.commit).toHaveBeenCalledTimes(1);
     });
@@ -628,11 +716,9 @@ describe('FirebaseService', () => {
 
     it('deleteRecurringFromDate devuelve 0 cuando no hay docs >= fromDate', async () => {
         const service = new FirebaseService('uid-1');
-        mockedGetDocs.mockResolvedValue(
-            {
-                docs: [{ data: () => ({ date: '2026-01-01' }) }],
-            } as never,
-        );
+        mockedGetDocs.mockResolvedValue({
+            docs: [{ data: () => ({ date: '2026-01-01' }) }],
+        } as never);
 
         const deleted = await service.deleteRecurringFromDate('rec', '2026-02-01');
         expect(deleted).toBe(0);
@@ -643,9 +729,9 @@ describe('FirebaseService', () => {
         const onData = vi.fn();
 
         service.subscribeToBillingStatus('req-1', onData);
-        const callback = mockedOnSnapshot.mock.calls[mockedOnSnapshot.mock.calls.length - 1][1] as (
-            snap: { exists: () => boolean },
-        ) => void;
+        const callback = mockedOnSnapshot.mock.calls[mockedOnSnapshot.mock.calls.length - 1][1] as (snap: {
+            exists: () => boolean;
+        }) => void;
 
         callback({ exists: () => false });
         expect(onData).not.toHaveBeenCalled();
@@ -656,9 +742,9 @@ describe('FirebaseService', () => {
         const onData = vi.fn();
 
         service.subscribeToBillingStatus('req-1', onData);
-        const errorCallback = mockedOnSnapshot.mock.calls[mockedOnSnapshot.mock.calls.length - 1][2] as unknown as (
-            err: { message: string },
-        ) => void;
+        const errorCallback = mockedOnSnapshot.mock.calls[
+            mockedOnSnapshot.mock.calls.length - 1
+        ][2] as unknown as (err: { message: string }) => void;
 
         errorCallback({ message: 'network error' });
         expect(onData).toHaveBeenCalledWith({ status: 'error', error: 'network error' });
@@ -739,23 +825,51 @@ describe('FirebaseService', () => {
 
     it('completeTask lanza error cuando no existe la nota', async () => {
         const service = new FirebaseService('uid-1');
-        mockedGetDoc.mockResolvedValue({ exists: () => false } as never);
+        mockedRunTransaction.mockImplementation(async (_db, callback) => {
+            mockedGetDoc.mockResolvedValue({ exists: () => false } as never);
+            const mockTransaction = {
+                get: mockedGetDoc,
+                update: vi.fn(),
+                set: vi.fn(),
+                delete: vi.fn(),
+            };
+            await callback(mockTransaction as never);
+        });
 
         await expect(service.completeTask('note-x', 0)).rejects.toThrow('Note not found');
     });
 
     it('updateTask lanza error si taskIndex no existe', async () => {
         const service = new FirebaseService('uid-1');
-        mockedGetDoc.mockResolvedValue({ exists: () => true, data: () => ({ tasks: [] }) } as never);
+        mockedRunTransaction.mockImplementation(async (_db, callback) => {
+            mockedGetDoc.mockResolvedValue({ exists: () => true, data: () => ({ tasks: [] }) } as never);
+            const mockTransaction = {
+                get: mockedGetDoc,
+                update: vi.fn(),
+                set: vi.fn(),
+                delete: vi.fn(),
+            };
+            await callback(mockTransaction as never);
+        });
 
         await expect(service.updateTask('note', 0, { text: 'x' })).rejects.toThrow('Task at index 0 not found');
     });
 
     it('toggleSubtaskCompletion lanza error si subtask no existe', async () => {
         const service = new FirebaseService('uid-1');
-        mockedGetDoc.mockResolvedValue(
-            { exists: () => true, data: () => ({ tasks: [{ text: 't', completed: false, subtasks: [] }] }) } as never,
-        );
+        mockedRunTransaction.mockImplementation(async (_db, callback) => {
+            mockedGetDoc.mockResolvedValue({
+                exists: () => true,
+                data: () => ({ tasks: [{ text: 't', completed: false, subtasks: [] }] }),
+            } as never);
+            const mockTransaction = {
+                get: mockedGetDoc,
+                update: vi.fn(),
+                set: vi.fn(),
+                delete: vi.fn(),
+            };
+            await callback(mockTransaction as never);
+        });
 
         await expect(service.toggleSubtaskCompletion('note', 0, 0)).rejects.toThrow('Subtask at index 0 not found');
     });
@@ -789,9 +903,10 @@ describe('FirebaseService', () => {
         const onData = vi.fn();
 
         service.subscribeToStaffProfile('uid-1', onData);
-        const callback = mockedOnSnapshot.mock.calls[mockedOnSnapshot.mock.calls.length - 1][1] as (
-            snap: { exists: () => boolean; data: () => Record<string, unknown> },
-        ) => void;
+        const callback = mockedOnSnapshot.mock.calls[mockedOnSnapshot.mock.calls.length - 1][1] as (snap: {
+            exists: () => boolean;
+            data: () => Record<string, unknown>;
+        }) => void;
 
         callback({ exists: () => true, data: () => ({ uid: 'uid-1', name: 'Dr' }) });
         expect(onData).toHaveBeenCalledWith(expect.objectContaining({ uid: 'uid-1' }));
@@ -802,9 +917,9 @@ describe('FirebaseService', () => {
         const onData = vi.fn();
 
         service.subscribeToStaffProfile('uid-1', onData);
-        const callback = mockedOnSnapshot.mock.calls[mockedOnSnapshot.mock.calls.length - 1][1] as (
-            snap: { exists: () => boolean },
-        ) => void;
+        const callback = mockedOnSnapshot.mock.calls[mockedOnSnapshot.mock.calls.length - 1][1] as (snap: {
+            exists: () => boolean;
+        }) => void;
 
         callback({ exists: () => false });
         expect(onData).toHaveBeenCalledWith(null);

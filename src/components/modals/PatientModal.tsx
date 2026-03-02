@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { User } from 'firebase/auth';
 import { ModalOverlay } from '../ui';
 import { useDataActions } from '../../hooks/useDataActions';
-import { usePatients } from '../../hooks/usePatients';
+import { useData } from '../../context/DataContext';
 import { toast } from 'sonner';
 import { StaffProfile, ContactRelationship, Patient, PatientInput } from '../../types';
 import { ChevronDown, ChevronUp, Baby } from 'lucide-react';
@@ -67,7 +67,7 @@ export const PatientModal = ({ onClose, user, profile, existingPatient }: Patien
     });
 
     const [showAdvanced, setShowAdvanced] = useState(false);
-    const { patients } = usePatients(user);
+    const { patients } = useData();
     const [isCustomProfessional, setIsCustomProfessional] = useState(false);
     const { addPatient, updatePatient } = useDataActions();
 

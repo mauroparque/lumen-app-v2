@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { User } from 'firebase/auth';
-import { serverTimestamp } from 'firebase/firestore';
 import { useService } from '../context/ServiceContext';
 import type { StaffProfile } from '../types';
 
@@ -29,16 +28,15 @@ export const useStaff = (user: User | null) => {
         async (data: { name: string; specialty?: string }) => {
             if (!user || !service) return;
 
-            const newProfile: StaffProfile = {
+            const newProfile = {
                 uid: user.uid,
                 email: user.email || '',
                 name: data.name,
-                role: 'professional',
+                role: 'professional' as const,
                 specialty: data.specialty,
-                createdAt: serverTimestamp() as StaffProfile['createdAt'],
             };
 
-            await service.createStaffProfile(user.uid, newProfile);
+            await service.createStaffProfile(user.uid, newProfile as StaffProfile);
         },
         [user, service],
     );

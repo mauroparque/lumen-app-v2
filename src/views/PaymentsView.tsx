@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { User } from 'firebase/auth';
 import { useData } from '../context/DataContext';
-import { usePatients } from '../hooks/usePatients';
 import { usePsiquePayments } from '../hooks/usePsiquePayments';
 import { useAgendaStats } from '../hooks/useAgendaStats';
 import {
@@ -22,17 +21,16 @@ import { PaymentModal } from '../components/modals/PaymentModal';
 import { IncomeProjection } from '../components/payments/IncomeProjection';
 import { toast } from 'sonner';
 import { Appointment, Payment } from '../types';
+import { isOverdue } from '../lib/utils';
+import { PSIQUE_RATE } from '../lib/psiqueCalculations';
 
 interface PaymentsViewProps {
     user: User;
     profile: { name?: string };
 }
 
-const PSIQUE_RATE = 0.25;
-
-export const PaymentsView = ({ user, profile }: PaymentsViewProps) => {
-    const { appointments, payments, loading } = useData();
-    const { patients } = usePatients(user);
+export const PaymentsView = ({ profile }: PaymentsViewProps) => {
+    const { appointments, payments, loading, patients } = useData();
     const [searchTerm, setSearchTerm] = useState('');
     const [viewMode, setViewMode] = useState<'overdue' | 'upcoming' | 'history' | 'psique' | 'projection'>('overdue');
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -79,16 +77,6 @@ export const PaymentsView = ({ user, profile }: PaymentsViewProps) => {
                     (a.patientEmail && a.patientEmail.toLowerCase().includes(lower)),
             );
         }
-
-        const now = new Date();
-
-        // Helper to check if an appointment is overdue (1 hour after start time)
-        const isOverdue = (appointment: Appointment) => {
-            const apptDateTime = new Date(appointment.date + 'T' + (appointment.time || '00:00') + ':00');
-            // Add 1 hour to appointment time
-            apptDateTime.setHours(apptDateTime.getHours() + 1);
-            return now > apptDateTime;
-        };
 
         const startOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
         const endOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);

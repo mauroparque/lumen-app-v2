@@ -13,8 +13,9 @@ import {
     serverTimestamp,
     Timestamp,
     getDocs,
-    getDoc,
     setDoc,
+    runTransaction,
+    type WriteBatch,
 } from 'firebase/firestore';
 import { db, storage } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -43,6 +44,17 @@ import type {
     PsiquePayment,
     StaffProfile,
 } from '../types';
+
+const FIRESTORE_BATCH_LIMIT = 500;
+
+async function commitInBatches(operations: ((batch: WriteBatch) => void)[]): Promise<void> {
+    for (let i = 0; i < operations.length; i += FIRESTORE_BATCH_LIMIT) {
+        const chunk = operations.slice(i, i + FIRESTORE_BATCH_LIMIT);
+        const batch = writeBatch(db);
+        chunk.forEach((op) => op(batch));
+        await batch.commit();
+    }
+}
 
 export class FirebaseService implements IDataService {
     private uid: string;
@@ -153,6 +165,26 @@ export class FirebaseService implements IDataService {
         };
     }
 
+    subscribeToPayments(onPayments: (data: Payment[]) => void): () => void {
+        const paymentsQuery = this.professionalName
+            ? query(
+                  collection(db, PAYMENTS_COLLECTION),
+                  where('professional', '==', this.professionalName),
+                  orderBy('date', 'desc'),
+                  limit(50),
+              )
+            : query(collection(db, PAYMENTS_COLLECTION), orderBy('date', 'desc'), limit(50));
+
+        return onSnapshot(
+            paymentsQuery,
+            (snapshot) => {
+                const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Payment);
+                onPayments(data);
+            },
+            (error) => console.error('Error fetching payments:', error),
+        );
+    }
+
     async addPatient(patient: PatientInput): Promise<string> {
         const data = {
             ...patient,
@@ -187,25 +219,26 @@ export class FirebaseService implements IDataService {
         dates: string[],
         recurrenceRule: string = 'WEEKLY',
     ): Promise<void> {
-        const batch = writeBatch(db);
         const seriesId = crypto.randomUUID();
 
-        dates.forEach((date, index) => {
-            const docRef = doc(collection(db, APPOINTMENTS_COLLECTION));
-            const appointmentData = {
-                ...baseAppointment,
-                date,
-                status: baseAppointment.status || 'programado',
-                createdByUid: this.uid,
-                createdAt: serverTimestamp(),
-                recurrenceId: seriesId,
-                recurrenceIndex: index,
-                recurrenceRule,
+        const operations = dates.map((date, index) => {
+            return (batch: WriteBatch) => {
+                const docRef = doc(collection(db, APPOINTMENTS_COLLECTION));
+                const appointmentData = {
+                    ...baseAppointment,
+                    date,
+                    status: baseAppointment.status || 'programado',
+                    createdByUid: this.uid,
+                    createdAt: serverTimestamp(),
+                    recurrenceId: seriesId,
+                    recurrenceIndex: index,
+                    recurrenceRule,
+                };
+                batch.set(docRef, appointmentData);
             };
-            batch.set(docRef, appointmentData);
         });
 
-        await batch.commit();
+        await commitInBatches(operations);
     }
 
     async updateAppointment(id: string, data: Partial<Appointment>): Promise<void> {
@@ -225,12 +258,11 @@ export class FirebaseService implements IDataService {
 
         if (snapshot.empty) return 0;
 
-        const batch = writeBatch(db);
-        snapshot.docs.forEach((docSnap) => {
-            batch.delete(docSnap.ref);
+        const operations = snapshot.docs.map((docSnap) => {
+            return (batch: WriteBatch) => batch.delete(docSnap.ref);
         });
 
-        await batch.commit();
+        await commitInBatches(operations);
         return snapshot.docs.length;
     }
 
@@ -246,22 +278,28 @@ export class FirebaseService implements IDataService {
 
         if (toDelete.length === 0) return 0;
 
-        const batch = writeBatch(db);
-        toDelete.forEach((docSnap) => {
-            batch.delete(docSnap.ref);
+        const operations = toDelete.map((docSnap) => {
+            return (batch: WriteBatch) => batch.delete(docSnap.ref);
         });
 
-        await batch.commit();
+        await commitInBatches(operations);
         return toDelete.length;
     }
 
     async addPayment(payment: PaymentInput, appointmentId?: string): Promise<string> {
+        if (!this.professionalName) {
+            throw new Error(
+                'addPayment requiere que professionalName esté seteado. Asegurate de que el perfil professional esté cargado antes de registrar un pago.',
+            );
+        }
+
         const batch = writeBatch(db);
         const paymentRef = doc(collection(db, PAYMENTS_COLLECTION));
 
         batch.set(paymentRef, {
             ...payment,
-            date: (payment.date && payment.date instanceof Timestamp) ? payment.date : Timestamp.now(),
+            professional: this.professionalName,
+            date: payment.date && payment.date instanceof Timestamp ? payment.date : Timestamp.now(),
             createdByUid: this.uid,
         });
 
@@ -375,6 +413,7 @@ export class FirebaseService implements IDataService {
     }
 
     async saveNote(noteData: Partial<ClinicalNote>, appointmentId: string, existingNoteId?: string): Promise<void> {
+        const batch = writeBatch(db);
         const notesCollection = collection(db, NOTES_COLLECTION);
 
         const basePayload = {
@@ -384,9 +423,10 @@ export class FirebaseService implements IDataService {
         };
 
         if (existingNoteId) {
-            await updateDoc(doc(notesCollection, existingNoteId), basePayload);
+            batch.update(doc(notesCollection, existingNoteId), basePayload);
         } else {
-            await addDoc(notesCollection, {
+            const newNoteRef = doc(notesCollection);
+            batch.set(newNoteRef, {
                 ...basePayload,
                 createdAt: Timestamp.now(),
                 createdBy: this.uid,
@@ -394,9 +434,10 @@ export class FirebaseService implements IDataService {
             });
         }
 
-        // Update appointment to indicate it has notes
         const appointmentRef = doc(db, APPOINTMENTS_COLLECTION, appointmentId);
-        await updateDoc(appointmentRef, { hasNotes: true });
+        batch.update(appointmentRef, { hasNotes: true });
+
+        await batch.commit();
     }
 
     async updateNote(noteId: string, data: Partial<ClinicalNote>): Promise<void> {
@@ -417,10 +458,7 @@ export class FirebaseService implements IDataService {
 
     // --- Tasks ---
     subscribeToAllNotes(onData: (notes: ClinicalNote[]) => void): () => void {
-        const q = query(
-            collection(db, NOTES_COLLECTION),
-            where('createdByUid', '==', this.uid),
-        );
+        const q = query(collection(db, NOTES_COLLECTION), where('createdByUid', '==', this.uid));
 
         return onSnapshot(
             q,
@@ -434,19 +472,19 @@ export class FirebaseService implements IDataService {
 
     async completeTask(noteId: string, taskIndex: number): Promise<void> {
         const noteRef = doc(db, NOTES_COLLECTION, noteId);
-        const noteSnap = await getDoc(noteRef);
 
-        if (!noteSnap.exists()) {
-            throw new Error('Note not found');
-        }
+        await runTransaction(db, async (transaction) => {
+            const noteSnap = await transaction.get(noteRef);
+            if (!noteSnap.exists()) throw new Error('Note not found');
 
-        const noteData = noteSnap.data() as ClinicalNote;
-        const updatedTasks = [...(noteData.tasks || [])];
+            const noteData = noteSnap.data() as ClinicalNote;
+            const updatedTasks = [...(noteData.tasks || [])];
 
-        if (updatedTasks[taskIndex]) {
-            updatedTasks[taskIndex].completed = true;
-            await updateDoc(noteRef, { tasks: updatedTasks });
-        }
+            if (updatedTasks[taskIndex]) {
+                updatedTasks[taskIndex] = { ...updatedTasks[taskIndex], completed: true };
+                transaction.update(noteRef, { tasks: updatedTasks });
+            }
+        });
     }
 
     async addTask(task: TaskInput): Promise<string> {
@@ -478,63 +516,56 @@ export class FirebaseService implements IDataService {
         data: { text: string; subtasks?: TaskSubitem[] },
     ): Promise<void> {
         const noteRef = doc(db, NOTES_COLLECTION, noteId);
-        const noteSnap = await getDoc(noteRef);
 
-        if (!noteSnap.exists()) {
-            throw new Error('Note not found');
-        }
+        await runTransaction(db, async (transaction) => {
+            const noteSnap = await transaction.get(noteRef);
+            if (!noteSnap.exists()) throw new Error('Note not found');
 
-        const noteData = noteSnap.data() as ClinicalNote;
-        const updatedTasks = [...(noteData.tasks || [])];
+            const noteData = noteSnap.data() as ClinicalNote;
+            const updatedTasks = [...(noteData.tasks || [])];
 
-        if (!updatedTasks[taskIndex]) {
-            throw new Error(`Task at index ${taskIndex} not found`);
-        }
+            if (!updatedTasks[taskIndex]) {
+                throw new Error(`Task at index ${taskIndex} not found`);
+            }
 
-        updatedTasks[taskIndex] = {
-            ...updatedTasks[taskIndex],
-            text: data.text,
-            subtasks: data.subtasks,
-        };
+            updatedTasks[taskIndex] = {
+                ...updatedTasks[taskIndex],
+                text: data.text,
+                subtasks: data.subtasks,
+            };
 
-        await updateDoc(noteRef, {
-            tasks: updatedTasks,
-            updatedAt: Timestamp.now(),
+            transaction.update(noteRef, {
+                tasks: updatedTasks,
+                updatedAt: Timestamp.now(),
+            });
         });
     }
 
-    async toggleSubtaskCompletion(
-        noteId: string,
-        taskIndex: number,
-        subtaskIndex: number,
-    ): Promise<void> {
+    async toggleSubtaskCompletion(noteId: string, taskIndex: number, subtaskIndex: number): Promise<void> {
         const noteRef = doc(db, NOTES_COLLECTION, noteId);
-        const noteSnap = await getDoc(noteRef);
 
-        if (!noteSnap.exists()) {
-            throw new Error('Note not found');
-        }
+        await runTransaction(db, async (transaction) => {
+            const noteSnap = await transaction.get(noteRef);
+            if (!noteSnap.exists()) throw new Error('Note not found');
 
-        const noteData = noteSnap.data() as ClinicalNote;
-        const updatedTasks = [...(noteData.tasks || [])];
+            const noteData = noteSnap.data() as ClinicalNote;
+            const updatedTasks = [...(noteData.tasks || [])];
 
-        if (!updatedTasks[taskIndex]?.subtasks?.[subtaskIndex]) {
-            throw new Error(`Subtask at index ${subtaskIndex} not found`);
-        }
+            if (!updatedTasks[taskIndex]?.subtasks?.[subtaskIndex]) {
+                throw new Error(`Subtask at index ${subtaskIndex} not found`);
+            }
 
-        const subtasks = [...(updatedTasks[taskIndex].subtasks || [])];
-        subtasks[subtaskIndex] = {
-            ...subtasks[subtaskIndex],
-            completed: !subtasks[subtaskIndex].completed,
-        };
-        updatedTasks[taskIndex] = {
-            ...updatedTasks[taskIndex],
-            subtasks,
-        };
+            const subtasks = [...(updatedTasks[taskIndex].subtasks || [])];
+            subtasks[subtaskIndex] = {
+                ...subtasks[subtaskIndex],
+                completed: !subtasks[subtaskIndex].completed,
+            };
+            updatedTasks[taskIndex] = { ...updatedTasks[taskIndex], subtasks };
 
-        await updateDoc(noteRef, {
-            tasks: updatedTasks,
-            updatedAt: Timestamp.now(),
+            transaction.update(noteRef, {
+                tasks: updatedTasks,
+                updatedAt: Timestamp.now(),
+            });
         });
     }
 
@@ -572,7 +603,11 @@ export class FirebaseService implements IDataService {
 
     // --- Patient-specific data ---
     subscribeToPatientAppointments(patientId: string, onData: (appointments: Appointment[]) => void): () => void {
-        const q = query(collection(db, APPOINTMENTS_COLLECTION), where('patientId', '==', patientId), orderBy('date', 'desc'));
+        const q = query(
+            collection(db, APPOINTMENTS_COLLECTION),
+            where('patientId', '==', patientId),
+            orderBy('date', 'desc'),
+        );
 
         return onSnapshot(
             q,
@@ -585,7 +620,11 @@ export class FirebaseService implements IDataService {
     }
 
     subscribeToPatientPayments(patientId: string, onData: (payments: Payment[]) => void): () => void {
-        const q = query(collection(db, PAYMENTS_COLLECTION), where('patientId', '==', patientId), orderBy('date', 'desc'));
+        const q = query(
+            collection(db, PAYMENTS_COLLECTION),
+            where('patientId', '==', patientId),
+            orderBy('date', 'desc'),
+        );
 
         return onSnapshot(
             q,
@@ -618,7 +657,11 @@ export class FirebaseService implements IDataService {
 
     async createStaffProfile(uid: string, profile: StaffProfile): Promise<void> {
         const docRef = doc(db, STAFF_COLLECTION, uid);
-        await setDoc(docRef, { ...profile, uid });
+        await setDoc(docRef, {
+            ...profile,
+            uid,
+            createdAt: profile.createdAt || serverTimestamp(),
+        });
     }
 
     async updateStaffProfile(uid: string, data: Partial<StaffProfile>): Promise<void> {

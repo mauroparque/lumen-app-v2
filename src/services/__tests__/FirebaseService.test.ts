@@ -335,6 +335,19 @@ describe('FirebaseService', () => {
         expect(setCall[1].professional).toBe('Dra. García');
     });
 
+    it('addPayment lanza error explícito cuando professionalName no está seteado', async () => {
+        const service = new FirebaseService('uid-99'); // sin professionalName
+
+        await expect(
+            service.addPayment({
+                patientName: 'Paciente Sin Pro',
+                amount: 1000,
+                date: null,
+                concept: 'Sesión',
+            }),
+        ).rejects.toThrow(/professional/i);
+    });
+
     it('subscribeToAppointments registra query por ventana de fechas', () => {
         const service = new FirebaseService('uid-1');
         const onData = vi.fn();

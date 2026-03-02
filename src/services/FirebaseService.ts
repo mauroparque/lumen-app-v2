@@ -287,12 +287,18 @@ export class FirebaseService implements IDataService {
     }
 
     async addPayment(payment: PaymentInput, appointmentId?: string): Promise<string> {
+        if (!this.professionalName) {
+            throw new Error(
+                'addPayment requiere que professionalName esté seteado. Asegurate de que el perfil professional esté cargado antes de registrar un pago.',
+            );
+        }
+
         const batch = writeBatch(db);
         const paymentRef = doc(collection(db, PAYMENTS_COLLECTION));
 
         batch.set(paymentRef, {
             ...payment,
-            professional: this.professionalName || '',
+            professional: this.professionalName,
             date: payment.date && payment.date instanceof Timestamp ? payment.date : Timestamp.now(),
             createdByUid: this.uid,
         });

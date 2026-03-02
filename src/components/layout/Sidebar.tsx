@@ -4,6 +4,7 @@ import { auth } from '../../lib/firebase';
 import { User } from 'firebase/auth';
 import { View } from '../../types';
 import { useData } from '../../context/DataContext';
+import { isOverdue } from '../../lib/utils';
 
 interface SidebarProps {
     user: User;
@@ -16,13 +17,8 @@ export const Sidebar = ({ user, currentView, setCurrentView }: SidebarProps) => 
 
     const hasPendingDebts = appointments.some((a) => {
         if (a.isPaid) return false;
-        // Cancelados sin cobro no generan deuda
         if (a.status === 'cancelado' && !a.chargeOnCancellation) return false;
-
-        const apptDate = new Date(a.date + 'T00:00:00');
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        return apptDate < now;
+        return isOverdue(a);
     });
 
     return (

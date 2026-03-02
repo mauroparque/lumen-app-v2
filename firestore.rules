@@ -12,7 +12,10 @@ service cloud.firestore {
         let d = getStaffData();
         return d != null && d.role == 'admin';
       }
-      function getProfessionalName() { return getStaffData().name; }
+      function getProfessionalName() {
+        let d = getStaffData();
+        return d != null ? d.name : null;
+      }
 
       // --- Schema Validation Helpers ---
       function isValidPatient() {
@@ -55,8 +58,8 @@ service cloud.firestore {
       // Pacientes — admin CRUD, profesional CRUD propios + lectura de otros
       match /patients/{patientId} {
         allow read: if isAuthenticated();
-        allow create: if isAuthenticated() && (isAdmin() || request.resource.data.professional == getProfessionalName()) && isValidPatient();
-        allow update, delete: if isAuthenticated() && (isAdmin() || resource.data.professional == getProfessionalName());
+        allow create: if isAuthenticated() && (isAdmin() || (getProfessionalName() != null && request.resource.data.professional == getProfessionalName())) && isValidPatient();
+        allow update, delete: if isAuthenticated() && (isAdmin() || (getProfessionalName() != null && resource.data.professional == getProfessionalName()));
       }
 
       // Turnos — admin CRUD, profesional CRUD propios + lectura de otros
@@ -65,10 +68,10 @@ service cloud.firestore {
       }
       match /appointments/{appointmentId} {
         allow read: if isAuthenticated();
-        allow create: if isAuthenticated() && (isAdmin() || request.resource.data.professional == getProfessionalName()) && isValidAppointment();
-        allow delete: if isAuthenticated() && isNotInvoiced() && (isAdmin() || resource.data.professional == getProfessionalName());
+        allow create: if isAuthenticated() && (isAdmin() || (getProfessionalName() != null && request.resource.data.professional == getProfessionalName())) && isValidAppointment();
+        allow delete: if isAuthenticated() && isNotInvoiced() && (isAdmin() || (getProfessionalName() != null && resource.data.professional == getProfessionalName()));
         allow update: if isAuthenticated() && (
-          isAdmin() || resource.data.professional == getProfessionalName()
+          isAdmin() || (getProfessionalName() != null && resource.data.professional == getProfessionalName())
         ) && (
           isNotInvoiced() ||
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPaid'])
@@ -78,8 +81,8 @@ service cloud.firestore {
       // Pagos — admin CRU, profesional CRU propios + lectura de otros; delete bloqueado
       match /payments/{paymentId} {
         allow read: if isAuthenticated();
-        allow create: if isAuthenticated() && (isAdmin() || request.resource.data.professional == getProfessionalName()) && isValidPayment();
-        allow update: if isAuthenticated() && (isAdmin() || resource.data.get('professional', '') == getProfessionalName());
+        allow create: if isAuthenticated() && (isAdmin() || (getProfessionalName() != null && request.resource.data.professional == getProfessionalName())) && isValidPayment();
+        allow update: if isAuthenticated() && (isAdmin() || (getProfessionalName() != null && resource.data.get('professional', '') == getProfessionalName()));
         allow delete: if false;
       }
 

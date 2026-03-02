@@ -261,7 +261,7 @@ export class FirebaseService implements IDataService {
 
         batch.set(paymentRef, {
             ...payment,
-            date: (payment.date && payment.date instanceof Timestamp) ? payment.date : Timestamp.now(),
+            date: payment.date && payment.date instanceof Timestamp ? payment.date : Timestamp.now(),
             createdByUid: this.uid,
         });
 
@@ -417,10 +417,7 @@ export class FirebaseService implements IDataService {
 
     // --- Tasks ---
     subscribeToAllNotes(onData: (notes: ClinicalNote[]) => void): () => void {
-        const q = query(
-            collection(db, NOTES_COLLECTION),
-            where('createdByUid', '==', this.uid),
-        );
+        const q = query(collection(db, NOTES_COLLECTION), where('createdByUid', '==', this.uid));
 
         return onSnapshot(
             q,
@@ -503,11 +500,7 @@ export class FirebaseService implements IDataService {
         });
     }
 
-    async toggleSubtaskCompletion(
-        noteId: string,
-        taskIndex: number,
-        subtaskIndex: number,
-    ): Promise<void> {
+    async toggleSubtaskCompletion(noteId: string, taskIndex: number, subtaskIndex: number): Promise<void> {
         const noteRef = doc(db, NOTES_COLLECTION, noteId);
         const noteSnap = await getDoc(noteRef);
 
@@ -572,7 +565,11 @@ export class FirebaseService implements IDataService {
 
     // --- Patient-specific data ---
     subscribeToPatientAppointments(patientId: string, onData: (appointments: Appointment[]) => void): () => void {
-        const q = query(collection(db, APPOINTMENTS_COLLECTION), where('patientId', '==', patientId), orderBy('date', 'desc'));
+        const q = query(
+            collection(db, APPOINTMENTS_COLLECTION),
+            where('patientId', '==', patientId),
+            orderBy('date', 'desc'),
+        );
 
         return onSnapshot(
             q,
@@ -585,7 +582,11 @@ export class FirebaseService implements IDataService {
     }
 
     subscribeToPatientPayments(patientId: string, onData: (payments: Payment[]) => void): () => void {
-        const q = query(collection(db, PAYMENTS_COLLECTION), where('patientId', '==', patientId), orderBy('date', 'desc'));
+        const q = query(
+            collection(db, PAYMENTS_COLLECTION),
+            where('patientId', '==', patientId),
+            orderBy('date', 'desc'),
+        );
 
         return onSnapshot(
             q,
@@ -618,7 +619,11 @@ export class FirebaseService implements IDataService {
 
     async createStaffProfile(uid: string, profile: StaffProfile): Promise<void> {
         const docRef = doc(db, STAFF_COLLECTION, uid);
-        await setDoc(docRef, { ...profile, uid });
+        await setDoc(docRef, {
+            ...profile,
+            uid,
+            createdAt: profile.createdAt || serverTimestamp(),
+        });
     }
 
     async updateStaffProfile(uid: string, data: Partial<StaffProfile>): Promise<void> {

@@ -66,23 +66,30 @@ service cloud.firestore {
       function isNotInvoiced() {
         return resource.data.get('billingStatus', 'pending') != 'invoiced';
       }
+      function isOnlyIsPaidChanging() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPaid']);
+      }
       match /appointments/{appointmentId} {
         allow read: if isAuthenticated();
         allow create: if isAuthenticated() && (isAdmin() || (getProfessionalName() != null && request.resource.data.professional == getProfessionalName())) && isValidAppointment();
         allow delete: if isAuthenticated() && isNotInvoiced() && (isAdmin() || (getProfessionalName() != null && resource.data.professional == getProfessionalName()));
+        // Marcar como pagado (solo isPaid): cualquier usuario autenticado puede hacerlo
+        // Cambios sustanciales: requiere admin o profesional dueño del turno
         allow update: if isAuthenticated() && (
-          isAdmin() || (getProfessionalName() != null && resource.data.professional == getProfessionalName())
+          isOnlyIsPaidChanging()
+          || (isAdmin() || (getProfessionalName() != null && resource.data.professional == getProfessionalName()))
         ) && (
-          isNotInvoiced() ||
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPaid'])
+          isNotInvoiced() || isOnlyIsPaidChanging()
         );
       }
 
       // Pagos — admin CRU, profesional CRU propios + lectura de otros; delete bloqueado
       match /payments/{paymentId} {
         allow read: if isAuthenticated();
-        allow create: if isAuthenticated() && (isAdmin() || (getProfessionalName() != null && request.resource.data.professional == getProfessionalName())) && isValidPayment();
-        allow update: if isAuthenticated() && (isAdmin() || (getProfessionalName() != null && resource.data.get('professional', '') == getProfessionalName()));
+        allow create: if isAuthenticated()
+          && (isAdmin() || request.resource.data.get('createdByUid', null) == request.auth.uid || (getProfessionalName() != null && request.resource.data.professional == getProfessionalName()))
+          && isValidPayment();
+        allow update: if isAuthenticated() && (isAdmin() || resource.data.get('createdByUid', null) == request.auth.uid || (getProfessionalName() != null && resource.data.get('professional', '') == getProfessionalName()));
         allow delete: if false;
       }
 

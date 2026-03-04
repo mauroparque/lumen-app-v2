@@ -15,9 +15,10 @@ jobs:
             - name: Trigger Coolify redeploy
               run: |
                 curl -X POST \
-                -H "Authorization: Bearer ${{ secrets.COOLIFY_DEPLOY_TOKEN }}" \
-                -H "CF-Access-Client-Id: ${{ secrets.CF_ACCESS_CLIENT_ID }}" \
-                -H "CF-Access-Client-Secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}" \
-                -H "Content-Type: application/json" \
-                -d '{"resourceId": "ygkk0o88ckkkk08gcswosoc8"}' \
-                "https://dev.lumensaludmental.com/api/v1/deploy"
+                  -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+                  -H "Authorization: Bearer ${{ secrets.COOLIFY_DEPLOY_TOKEN }}" \
+                  -H "CF-Access-Client-Id: ${{ secrets.CF_ACCESS_CLIENT_ID }}" \
+                  -H "CF-Access-Client-Secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}" \
+                  -H "Content-Type: application/json" \
+                  -d '{"uuid": "ygkk0o88ckkkk08gcswosoc8"}' \
+                  "https://dev.lumensaludmental.com/api/v1/deploy"

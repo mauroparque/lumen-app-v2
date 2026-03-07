@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Session timeout (30 min)** via `useSessionTimeout` hook — auto sign-out tras inactividad; escucha 5 eventos DOM, integrado en `App.tsx` (SEC-11)
+- **Schema validation en Firestore rules** — `isValidPatient()`, `isValidAppointment()`, `isValidPayment()` aplicadas en reglas `create`; desplegadas a Firebase (SEC-06)
+- **"Estadísticas" en `MobileHeader`** — nuevo ítem de navegación (`BarChart3`) + indicador rojo de deuda pendiente en "Pagos" basado en `isOverdue()` (COMP-N01)
+- **`subscribeToPayments`** en `IDataService` + `FirebaseService` — suscripción real-time a pagos scoped por `professionalName`; reemplaza el listener `subscribeToFinance` desperdiciado (ARCH-N03)
+- **`commitInBatches()` helper** con `FIRESTORE_BATCH_LIMIT = 500` — aplicado en `addRecurringAppointments` y `deleteRecurringSeries` para respetar el límite de Firestore (ARCH-N06)
+- **Firestore indexes config** (`firestore.indexes.json`) referenciado en `firebase.json`
+- **Rate limiting** en `validateTurnstile` Cloud Function (SEC-N03)
+
+### Changed
+
+- **`saveNote`** reescrito con `writeBatch` — nota + `hasNotes: true` en el paciente en una sola operación atómica (ARCH-N05)
+- **`completeTask`, `updateTask`, `toggleSubtaskCompletion`** reescritos con `runTransaction` — read-then-write atómico (ARCH-N04)
+- **`DataContext`** ahora espera los 4 flags (patients, myAppointments, allAppointments, payments) para hacer `setLoading(false)` — con fallback de 10s para evitar loading infinito (ARCH-N07)
+- **`useDataActions`** memoizado con `useMemo([service])` — previene recreación de 17 funciones por render (HOOK-N01)
+- **`serverTimestamp`** movido de `useStaff` a `FirebaseService.createStaffProfile` — hook ya no importa de `firebase/firestore` directamente (HOOK-N02)
+- **`usePatients`** wrapper trivial eliminado — 7 callers migrados a `useData()` directo (HOOK-N03)
+- **`PSIQUE_RATE`** centralizado en `psiqueCalculations.ts` — duplicados eliminados de `useAgendaStats` y `PaymentsView` (HOOK-N04)
+- **`calculateAge` e `isOverdue`** centralizados en `utils.ts` — duplicados eliminados de vistas (DUP)
+- **Cloud Functions** migradas de `functions.config()` deprecado a `defineString` params v2; `BILLING_SECRET` usa Secret Manager vía `runWith({ secrets })` (SEC-N05)
+- **PWA**: modo de actualización cambiado a `autoUpdate` + `skipWaiting` — garantiza activación inmediata del nuevo service worker sin interacción del usuario
+- **Storage rules**: acceso a attachments ahora aplica RBAC por paciente
+
+### Fixed
+
+- **Firestore rules — permisos generales**: `getProfessionalName()` reforzado con null-check; nueva función `isProfessionalOf()` con fallback por email cuando el campos `name` del staff doc difiere — resolvía `permission-denied` en pagos y turnos
+- **Firestore rules — `isPaid`**: actualización del campo `isPaid` ahora permitida para cualquier usuario autenticado (antes solo admin)
+- **Firestore rules — `notes.update`**: soporte para notas legacy sin campo `createdByUid`
+- **Firestore rules — `psiquePayments`**: escritura permitida para el propio profesional (antes solo admin)
+- **Firestore rules — `isAdmin()`**: null-safe; regla de lectura de `notes` relajada a `isAuthenticated()`
+- `addPayment`: validate `professionalName` antes del batch write; campo `professional` incluido en el documento de pago para RBAC (SEC ownership)
+- `subscribeToPayments`: filtrado por `professionalName` — evita fuga de datos entre profesionales
+- `calculateAge`: birthDate parseada como fecha local — corrige bug de UTC offset que producía edades erróneas
+- `useSessionTimeout`: Promise de `signOut` manejada correctamente; ref limpiada tras disparar
+- `AuthScreen`: errores de Firebase Auth mapeados a mensajes en español vía `getAuthErrorMessage()` — ya no expone códigos crudos de Firebase al usuario (SEC-13)
+- `SidebarItem`: props tipadas explícitamente con `interface SidebarItemProps` — elimina `any` (COMP-N02)
+- `MobileHeader`: indicador de deuda usa `isOverdue()` centralizado — consistente con el sidebar
+- Billing queue: datos sanitizados con campo whitelist antes de enviar al webhook (SEC-N02)
+- Storage rules: límite de tamaño de archivo (10 MB) y validación de tipo MIME (SEC-07)
+- `deletePayment` eliminado de la capa de servicio — bloqueado por reglas Firestore; era dead code (ARCH-N01)
+- `addPayment`: respeta el campo `date` de `PaymentInput`, fallback a `Timestamp.now()` (ARCH-N02)
+- `psiquePayments`: escritura restringida a admin (SEC-N01)
+- Turnstile: fallback por timeout con retry automático; recarga de página si el widget nunca carga (sin bypass silencioso)
+
+### CI
+
+- Workflow de GitHub Actions actualizado para redeploy en Coolify vía webhook (con headers de Cloudflare)
+
 ---
 
 ## [1.1.0] - 2026-02-26
